@@ -1,0 +1,371 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:receitas_mkt/ui/widgets/shared_widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:receitas_mkt/data/sheets_service.dart';
+import 'package:receitas_mkt/logic/cash_logic_provider.dart';
+import 'package:receitas_mkt/logic/sync_controller.dart';
+
+class SettingsView extends ConsumerStatefulWidget {
+  const SettingsView({super.key});
+
+  @override
+  ConsumerState<SettingsView> createState() => _SettingsViewState();
+}
+
+class _SettingsViewState extends ConsumerState<SettingsView> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Configurações'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          _buildSectionTitle(context, 'Google Sheets'),
+          _buildSheetsConfig(context, ref),
+          const SizedBox(height: 24),
+          _buildSectionTitle(context, 'Account'),
+          _buildAccountSection(context, ref),
+          const SizedBox(height: 24),
+          _buildSectionTitle(context, 'Sincronização'),
+          _buildSyncSection(context, ref),
+          const SizedBox(height: 24),
+          _buildSectionTitle(context, 'Sobre'),
+          _buildAboutSection(context),
+        ],
+      ),
+      bottomNavigationBar: const BottomBar(),
+    );
+  }
+
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+      ),
+    );
+  }
+
+  Widget _buildSheetsConfig(BuildContext context, WidgetRef ref) {
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            title: const Text('Link da Planilha'),
+            subtitle: const Text('Clique para configurar'),
+            trailing: const Icon(Icons.edit),
+            onTap: () => _showSheetsLinkDialog(context),
+          ),
+          const Divider(),
+          ListTile(
+            title: const Text('Credenciais Service Account'),
+            subtitle: const Text('JSON das credenciais'),
+            trailing: const Icon(Icons.file_copy),
+            onTap: () => _showCredentialsDialog(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccountSection(BuildContext context, WidgetRef ref) {
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            title: const Text('Sistema'),
+            subtitle: const Text('Versão: 1.0.0'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showResetDialog(context, ref),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSyncSection(BuildContext context, WidgetRef ref) {
+    final syncController = ref.read(syncControllerProvider);
+
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.sync_problem),
+            title: const Text('Sincronizar Agora'),
+            subtitle: const Text('Sincroniza todos os logs pendentes'),
+            trailing: const Icon(Icons.sync),
+            onTap: () => _runSync(context, ref, syncController),
+          ),
+          const Divider(),
+          ListTile(
+            title: const Text('Status de Sincronização'),
+            subtitle: Consumer(
+              builder: (context, ref, _) => FutureBuilder<int>(
+                  future: syncController.getPendingCount(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Text('Verificando...');
+                    }
+                    if (snapshot.hasError) {
+                      return Text('Erro: ${snapshot.error}');
+                    }
+                    final count = snapshot.data ?? 0;
+                    return Text(count > 0 ? '$count logs pendentes' : 'Sincronizado');
+                  }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAboutSection(BuildContext context) {
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('Sobre o App'),
+            subtitle: const Text('Gerenciador de Fluxo de Caixa'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showAboutDialog(context),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.contact_support),
+            title: const Text('Suporte'),
+            subtitle: const Text('Ajuda e dúvidas frequentes'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showSupportDialog(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showSheetsLinkDialog(BuildContext context) async {
+    final TextEditingController controller = TextEditingController();
+    final SheetsService sheetsService = SheetsService();
+    final ref = this.ref;
+
+    return showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Configurar Google Sheets'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                hintText: 'https://docs.google.com/spreadsheets/d/...',
+                labelText: 'Link da Planilha',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final link = controller.text.trim();
+              final spreadsheetId = SheetsService.extractSpreadsheetId(link);
+
+              if (spreadsheetId != null) {
+                sheetsService.saveSheetsLink(link);
+                sheetsService.saveSpreadsheetId(spreadsheetId);
+
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Planilha configurada com sucesso')),
+                );
+                Navigator.pop(dialogContext);
+                // Recarrega o provider de logs após configurar
+                ref.read(cashLogsProvider.notifier).loadAllLogs();
+              } else {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Link inválido. Tente novamente.')),
+                );
+              }
+            },
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showCredentialsDialog(BuildContext context) async {
+    final TextEditingController controller = TextEditingController();
+    final ref = this.ref;
+
+    return showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Credenciais Service Account'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                hintText: 'Cole as credenciais JSON',
+                labelText: 'JSON das Credenciais',
+              ),
+              maxLines: 5,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final json = controller.text.trim();
+              if (json.isNotEmpty) {
+                final sheetsService = SheetsService();
+                sheetsService.saveCredentials(json);
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Credenciais salvas com sucesso')),
+                );
+                // Recarrega o provider de logs após configurar
+                ref.read(cashLogsProvider.notifier).loadAllLogs();
+              }
+            },
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _runSync(BuildContext context, WidgetRef ref, SyncController syncController) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final snackBarKey = UniqueKey();
+
+    try {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('Sincronizando...')),
+      );
+
+      final synced = await syncController.syncPendingLogs();
+
+      if (synced > 0) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text('$synced log(s) sincronizado(s)')),
+        );
+        ref.read(cashLogsProvider.notifier).loadAllLogs();
+      } else {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(content: Text('Todos os registros já estão sincronizados')),
+        );
+      }
+    } catch (e) {
+      scaffoldMessenger.removeCurrentSnackBar();
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Erro ao sincronizar: $e')),
+      );
+    }
+  }
+
+  Future<void> _showResetDialog(BuildContext context, WidgetRef ref) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Resetar Dados'),
+        content: const Text('Todos os dados locais serão apagados. Esta ação não pode ser desfeita.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Dados resetados. Reinicie o app.')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Apagar Tudo'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAboutDialog(BuildContext context) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sobre'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Cash Flow Marketing'),
+            SizedBox(height: 8),
+            Text('Versão: 1.0.0'),
+            SizedBox(height: 8),
+            Text('Gerenciador de fluxo de caixa para área de marketing'),
+            SizedBox(height: 16),
+            Text('Tecnologias:'),
+            Text('- Flutter + Riverpod'),
+            Text('- SQLite (offline-first)'),
+            Text('- Google Sheets (sincronização)'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fechar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showSupportDialog(BuildContext context) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Suporte'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Para suporte, entre em contato com:'),
+            SizedBox(height: 8),
+            Text('- Email: suporte@cashflow.com'),
+            Text('- WhatsApp: (11) 99999-9999'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fechar'),
+          ),
+        ],
+      ),
+    );
+  }
+}
