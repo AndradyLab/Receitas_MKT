@@ -97,7 +97,6 @@ class DatabaseHelper {
 
   // ==================== CRUD OPERATIONS ====================
 
-  /// Salva um novo log no banco
   Future<void> insertCashLog(CashLog log) async {
     final db = await database;
     await db.insert(

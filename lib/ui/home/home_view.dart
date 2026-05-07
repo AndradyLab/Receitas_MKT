@@ -215,7 +215,6 @@ class _HomeViewState extends ConsumerState<HomeView>
 
   void _navigateToForm() async {
     context.go('/form');
-    // ref.read(cashLogsProvider.notifier).loadAllLogs();
   }
 
   Future<void> _showEditBalanceDialog(double currentBalance) async {
@@ -245,7 +244,7 @@ class _HomeViewState extends ConsumerState<HomeView>
       ),
     );
   }
-
+  //TODO
   void _showSyncStatus() {
     final syncController = ref.read(syncControllerProvider);
     syncController.getPendingCount().then((count) {
@@ -272,13 +271,20 @@ class _HomeViewState extends ConsumerState<HomeView>
     }
   }
 
-  void _showTransactionDetails(CashLog log) {
+  Future<void> _showTransactionDetails(CashLog log) async {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(log.type.displayName),
+        title: Center(child: Text(log.type.displayName)),
         content: Text('Valor: ${_currencyFormatter.format(log.amount)}\nFuncionário: ${log.employeeName}'),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fechar'))],
+        actions: [
+          if (log.photoPath != null)
+            TextButton(
+                onPressed: () => showPhoto(context, log.photoPath!),
+                child: const Text("Nota Fiscal")
+            ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fechar'))
+        ],
       ),
     );
   }

@@ -1,6 +1,6 @@
-import 'dart:io'; // Adicionado para corrigir o erro do File()
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // Importação do Riverpod necessária
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:receitas_mkt/ui/widgets/shared_widgets.dart';
@@ -98,7 +98,6 @@ class _FormViewState extends ConsumerState<FormView> {
     );
   }
 
-  // Métodos de construção de UI mantidos como no seu código...
   Widget _buildTypeSelector() {
     return Card(
       child: ListTile(

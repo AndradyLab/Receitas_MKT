@@ -1,12 +1,11 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import 'package:receitas_mkt/data/cash_log_model.dart';
 import 'package:receitas_mkt/logic/cash_logic_provider.dart';
-import 'package:receitas_mkt/ui/form/form_view.dart';
 import 'package:receitas_mkt/ui/widgets/shared_widgets.dart';
 
 class LogsView extends ConsumerWidget {
@@ -18,7 +17,7 @@ class LogsView extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Gerenciar Logs'),
+        title: const Text('Gerenciar Registros'),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -38,6 +37,11 @@ class LogsView extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _navigateToForm(context),
+        backgroundColor: Colors.green,
+        mouseCursor: SystemMouseCursors.click,
+        hoverColor: Colors.green.shade200,
+        hoverElevation: 12.0,
+        splashColor: Colors.green.shade700,
         icon: const Icon(Icons.add),
         label: const Text('Novo Registro'),
       ),
@@ -74,7 +78,7 @@ class LogsView extends ConsumerWidget {
           const Text('Nenhum registro encontrado'),
           const SizedBox(height: 8),
           TextButton(
-            onPressed: () => _navigateToForm(context),
+            onPressed: () => context.go('/form'),
             child: const Text('Adicionar primeiro registro'),
           ),
         ],
@@ -101,7 +105,6 @@ class LogsView extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 CashTypeBadge(type: log.type),
-                const SizedBox(height: 4),
                 Text(
                   _formatDate(log.date),
                   style: Theme.of(context).textTheme.labelSmall,
@@ -111,16 +114,37 @@ class LogsView extends ConsumerWidget {
             title: Text(
               log.employeeName,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                fontWeight: FontWeight.bold,
+              ),
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  log.products.isNotEmpty ? log.products.join(', ') : 'Sem produtos',
+                  log.products.isEmpty
+                      ? 'Sem produtos'
+                      : log.products.length > 3
+                      ? '${log.products.take(3).join(', ')} e mais'
+                      : log.products.join(', '),
                   style: Theme.of(context).textTheme.labelSmall,
                 ),
+                const SizedBox(height: 4),
+                if (log.photoPath == null)
+                  Text(
+                    "Não possui nota fiscal",
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
+                  )
+                else
+                  Text(
+                    "Possui nota fiscal",
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
                 const SizedBox(height: 4),
                 Text(
                   log.isSynced ? 'Sincronizado' : 'Pendente',
@@ -148,6 +172,7 @@ class LogsView extends ConsumerWidget {
   Future<void> _showSearchDialog(BuildContext context, WidgetRef ref) async {
     final TextEditingController controller = TextEditingController();
     List<CashLog> filteredLogs = [];
+    SearchFilter currentFilter = SearchFilter.employee;
 
     return showDialog(
       context: context,
@@ -161,19 +186,48 @@ class LogsView extends ConsumerWidget {
               children: [
                 TextField(
                   controller: controller,
-                  decoration: const InputDecoration(
-                    hintText: 'Nome do funcionário...',
-                    prefixIcon: Icon(Icons.search),
+                  decoration: InputDecoration(
+                    hintText: currentFilter == SearchFilter.employee
+                        ? 'Nome do funcionário...'
+                        : currentFilter == SearchFilter.product
+                        ? 'Nome do produto: Pão, Desodorante...'
+                        : 'Buscar por data: dia/mês/ano',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: PopupMenuButton<SearchFilter>(
+                      icon: const Icon(Icons.filter_list),
+                      tooltip: 'Filtrar por',
+                      initialValue: currentFilter,
+                      onSelected: (SearchFilter result) {
+                        setState(() {
+                          currentFilter = result;
+                          controller.clear();
+                          filteredLogs = [];
+                        });
+                      },
+                      itemBuilder: (BuildContext context) => <PopupMenuEntry<SearchFilter>>[
+                        const PopupMenuItem<SearchFilter>(
+                          value: SearchFilter.employee,
+                          child: Text('Funcionário'),
+                        ),
+                        const PopupMenuItem<SearchFilter>(
+                          value: SearchFilter.product,
+                          child: Text('Produto'),
+                        ),
+                        const PopupMenuItem<SearchFilter>(
+                          value: SearchFilter.date,
+                          child: Text('Data'),
+                        ),
+                      ],
+                    ),
                   ),
                   autofocus: true,
                   onChanged: (value) {
                     final currentState = ref.read(cashLogsProvider).value;
                     if (value.isNotEmpty && currentState != null) {
-                      final results = currentState.logs
-                          .where((log) => log.employeeName
-                              .toLowerCase()
-                              .contains(value.toLowerCase()))
-                          .toList();
+                      final results = currentState.logs.where((log) => switch (currentFilter) {
+                        SearchFilter.employee => log.employeeName.toLowerCase().contains(value.toLowerCase()),
+                        SearchFilter.product  => log.products.any((p) => p.toLowerCase().contains(value)),
+                        SearchFilter.date     => DateFormat('dd/MM/yyyy').format(log.date).contains(value),                      }).toList();
                       setState(() => filteredLogs = results);
                     } else {
                       setState(() => filteredLogs = []);
@@ -182,7 +236,11 @@ class LogsView extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 Flexible(
-                  child: filteredLogs.isNotEmpty
+                  child: controller.text.isEmpty
+                      ? const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Text('Faça uma busca para filtrar os seus dados.'),
+                  ) : filteredLogs.isNotEmpty
                       ? ListView.builder(
                           shrinkWrap: true,
                           itemCount: filteredLogs.length,
@@ -196,7 +254,7 @@ class LogsView extends ConsumerWidget {
                                       locale: 'pt_BR', symbol: 'R\$')
                                   .format(log.amount)),
                               onTap: () {
-                                Navigator.pop(dialogContext);
+                                Navigator.pop(context);
                                 _showLogDetails(context, ref, log);
                               },
                             );
@@ -212,7 +270,7 @@ class LogsView extends ConsumerWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
+              onPressed: () => Navigator.pop(context),
               child: const Text('Cancelar'),
             ),
           ],
@@ -243,15 +301,13 @@ class LogsView extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildDetailRow(context, 'ID', log.id),
               _buildDetailRow(context, 'Valor', formatter.format(log.amount)),
               _buildDetailRow(context, 'Funcionário', log.employeeName),
               _buildDetailRow(context, 'Data', _formatDate(log.date)),
               if (log.products.isNotEmpty)
                 _buildDetailRow(context, 'Produtos', log.products.join(', ')),
-              _buildDetailRow(context, 'Status de Sync', log.isSynced ? 'Sincronizado' : 'Pendente'),
               if (log.photoPath != null)
-                _buildDetailRow(context, 'Foto', log.photoPath!.split('/').last),
+                _buildDetailRow(context, 'Nota Fiscal', log.photoPath!.split('/').last),
             ],
           ),
         ),
@@ -267,7 +323,7 @@ class LogsView extends ConsumerWidget {
           ),
           if (log.photoPath != null)
             TextButton(
-              onPressed: () => _showPhoto(context, log.photoPath!),
+              onPressed: () => showPhoto(context, log.photoPath!),
               child: const Text('Ver Foto'),
             ),
           TextButton(
@@ -279,79 +335,280 @@ class LogsView extends ConsumerWidget {
     );
   }
 
-  Future<void> _showPhoto(BuildContext context, String photoPath) async {
-    return showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.file(
-                File(photoPath),
-                height: 300,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Fechar'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<void> _editLog(BuildContext context, WidgetRef ref, CashLog log) async {
     final TextEditingController amountController = TextEditingController(text: log.amount.toString());
     final TextEditingController employeeController = TextEditingController(text: log.employeeName);
+    final TextEditingController productsController = TextEditingController(text: log.products.join(', '));
+
+    final ImagePicker picker = ImagePicker();
+
+    CashType selectedType = log.type;
+    DateTime selectedDate = log.date;
+    String? selectedPhotoPath = log.photoPath;
+    String? valueError;
+    String? employeeError;
 
     return showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Editar Registro'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: amountController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Valor (R\$)'),
+      builder: (context) => StatefulBuilder(
+        builder: (BuildContext dialogContext, StateSetter setState) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: employeeController,
-              decoration: const InputDecoration(labelText: 'Funcionário'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-          ElevatedButton(
-            onPressed: () async {
-              final newAmount = double.tryParse(amountController.text);
-              final newEmployee = employeeController.text.trim();
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 500),
+              padding: const EdgeInsets.all(24.0),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Editar Registro',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                          tooltip: 'Fechar',
+                        ),
+                      ],
+                    ),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Icon(
+                          selectedType == CashType.ingress ? Icons.arrow_upward : Icons.arrow_downward,
+                          color: selectedType == CashType.ingress ? Colors.green : Colors.red,
+                          size: 32,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                            child: DropdownButtonFormField<CashType>(
+                                initialValue: selectedType,
+                                decoration: const InputDecoration(
+                                    labelText: "Tipo de transação",
+                                    border: OutlineInputBorder()
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: CashType.ingress,
+                                    child: Text('Receita'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: CashType.egress,
+                                    child: Text('Despesa'),
+                                  ),
+                                ],
+                                onChanged: (CashType? newValue) {
+                                  if (newValue != null) {
+                                    setState(() {
+                                      selectedType = newValue;
+                                    });
+                                  }
+                                }
+                            )
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: amountController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (value) {
+                        if (valueError != null) {
+                          setState(() => valueError = null);
+                        }
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'Valor (R\$)',
+                        prefixText: 'R\$ ',
+                        errorText: valueError,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: employeeController,
+                      onChanged: (value) {
+                        if (employeeError != null) {
+                          setState(() => employeeError = null) ;
+                        }
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'Funcionário',
+                        errorText: employeeError
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: productsController,
+                      decoration: const InputDecoration(
+                        labelText: 'Produtos',
+                        hintText: 'Separe os itens por vírgula: Pão, Chocolate',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text('Data: ${DateFormat('dd/MM/yyyy').format(selectedDate)}'),
+                      style: OutlinedButton.styleFrom(
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                      ),
+                      onPressed: () async {
+                        final DateTime? pickedDate = await showDatePicker(
+                          context: dialogContext,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
 
-              if (newAmount != null && newEmployee.isNotEmpty) {
-                final updatedLog = log.copyWith(amount: newAmount, employeeName: newEmployee);
-                await ref.read(cashLogsProvider.notifier).updateLog(updatedLog);
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Registro atualizado com sucesso')),
-                  );
-                }
-              }
-            },
-            child: const Text('Salvar'),
-          ),
-        ],
+                        if (pickedDate != null) {
+                          setState(() => selectedDate = pickedDate);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    const Text('Nota Fiscal:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    if (selectedPhotoPath != null)
+                      Wrap(
+                        alignment: WrapAlignment.spaceEvenly,
+                        spacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.visibility),
+                            label: const Text('Visualizar'),
+                            onPressed: () => showPhoto(context, selectedPhotoPath!),
+                          ),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.edit),
+                            label: const Text('Trocar'),
+                            onPressed: () async {
+                              final file = await picker.pickImage(source: ImageSource.gallery);
+                              if (file != null) {
+                                setState(() => selectedPhotoPath = file.path);
+                              }
+                            },
+                          ),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.camera_alt),
+                            label: const Text('Nova foto'),
+                            onPressed: () async {
+                              final file = await picker.pickImage(source: ImageSource.camera);
+                              if (file != null) {
+                                setState(() => selectedPhotoPath = file.path);
+                              }
+                            }
+                          ),
+                        ],
+                      )
+                    else
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.camera_alt),
+                            label: const Text('Câmera'),
+                            onPressed: () async {
+                              final file = await picker.pickImage(source: ImageSource.camera);
+                              if (file != null) {
+                                setState(() => selectedPhotoPath = file.path);
+                              }
+                            },
+                          ),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.image),
+                            label: const Text('Galeria'),
+                            onPressed: () async {
+                              final file = await picker.pickImage(source: ImageSource.gallery);
+                              if (file != null) {
+                                setState(() => selectedPhotoPath = file.path);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+
+                    const SizedBox(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancelar')
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () async {
+                            final cleanAmountText = amountController.text.replaceAll(',', '.');
+                            final newAmount = double.tryParse(cleanAmountText);
+                            final newEmployee = employeeController.text.trim();
+
+                            if (newAmount == null || newAmount <= 0) {
+                              setState(() {
+                                valueError = 'Digite um número válido';
+                              });
+                              return;
+                            }
+
+                            if (newEmployee.isEmpty) {
+                              setState(() {
+                                employeeError = 'Digite o nome do funcionário';
+                              });
+                              return;
+                            }
+
+                            final newProducts = productsController.text
+                                .split(',')
+                                .map((e) => e.trim())
+                                .where((e) => e.isNotEmpty)
+                                .toList();
+
+                            if (newEmployee.isNotEmpty) {
+                              final updatedLog = log.copyWith(
+                                amount: newAmount,
+                                employeeName: newEmployee,
+                                type: selectedType,
+                                date: selectedDate,
+                                products: newProducts,
+                                photoPath: selectedPhotoPath,
+                              );
+
+                              await ref.read(cashLogsProvider.notifier).updateLog(updatedLog);
+
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Registro atualizado com sucesso'),
+                                    backgroundColor: Colors.white,
+                                  ),
+                                );
+                              }
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Preencha um valor válido e o nome do funcionário.')
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text('Salvar'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -363,11 +620,12 @@ class LogsView extends ConsumerWidget {
         title: const Text('Confirmar Exclusão'),
         content: const Text('Deseja remover permanentemente este registro?'),
         actions: [
-          TextButton(onPressed: () => context.go('/form'), child: const Text('Cancelar')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () async {
               await ref.read(cashLogsProvider.notifier).deleteLog(log.id);
-              if (context.mounted) Navigator.pop(context);
+              if (!context.mounted) return;
+              Navigator.of(context)..pop()..pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Excluído com sucesso')),
               );
@@ -384,11 +642,8 @@ class LogsView extends ConsumerWidget {
     context.go('/form');
   }
 
+  // TODO: Alterar para DATE quando mexer no forms
   String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-    if (diff.inMinutes < 60) return 'Há ${diff.inMinutes} min';
-    if (diff.inHours < 24) return 'Há ${diff.inHours}h';
     return DateFormat('dd/MM/yyyy').format(date);
   }
 
@@ -410,3 +665,5 @@ class LogsView extends ConsumerWidget {
     );
   }
 }
+
+enum SearchFilter { employee, product, date }
