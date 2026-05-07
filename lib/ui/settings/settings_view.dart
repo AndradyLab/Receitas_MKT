@@ -191,7 +191,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                 );
                 Navigator.pop(dialogContext);
                 // Recarrega o provider de logs após configurar
-                ref.read(cashLogsProvider.notifier).loadAllLogs();
+                ref.read(cashLogsProvider(false).notifier).loadAllLogs();
               } else {
                 ScaffoldMessenger.of(dialogContext).showSnackBar(
                   const SnackBar(content: Text('Link inválido. Tente novamente.')),
@@ -242,7 +242,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                   const SnackBar(content: Text('Credenciais salvas com sucesso')),
                 );
                 // Recarrega o provider de logs após configurar
-                ref.read(cashLogsProvider.notifier).loadAllLogs();
+                ref.read(cashLogsProvider(false).notifier).loadAllLogs();
               }
             },
             child: const Text('Salvar'),
@@ -267,7 +267,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
         scaffoldMessenger.showSnackBar(
           SnackBar(content: Text('$synced log(s) sincronizado(s)')),
         );
-        ref.read(cashLogsProvider.notifier).loadAllLogs();
+        ref.read(cashLogsProvider(false).notifier).loadAllLogs();
       } else {
         scaffoldMessenger.showSnackBar(
           const SnackBar(content: Text('Todos os registros já estão sincronizados')),

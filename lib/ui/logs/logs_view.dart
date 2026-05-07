@@ -13,7 +13,7 @@ class LogsView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cashLogsAsync = ref.watch(cashLogsProvider);
+    final cashLogsAsync = ref.watch(cashLogsProvider(false));
 
     return Scaffold(
       appBar: AppBar(
@@ -222,7 +222,7 @@ class LogsView extends ConsumerWidget {
                   ),
                   autofocus: true,
                   onChanged: (value) {
-                    final currentState = ref.read(cashLogsProvider).value;
+                    final currentState = ref.read(cashLogsProvider(false)).value;
                     if (value.isNotEmpty && currentState != null) {
                       final results = currentState.logs.where((log) => switch (currentFilter) {
                         SearchFilter.employee => log.employeeName.toLowerCase().contains(value.toLowerCase()),
@@ -580,7 +580,7 @@ class LogsView extends ConsumerWidget {
                                 photoPath: selectedPhotoPath,
                               );
 
-                              await ref.read(cashLogsProvider.notifier).updateLog(updatedLog);
+                              await ref.read(cashLogsProvider(false).notifier).updateLog(updatedLog);
 
                               if (context.mounted) {
                                 Navigator.pop(context);
@@ -623,7 +623,7 @@ class LogsView extends ConsumerWidget {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () async {
-              await ref.read(cashLogsProvider.notifier).deleteLog(log.id);
+              await ref.read(cashLogsProvider(false).notifier).deleteLog(log.id);
               if (!context.mounted) return;
               Navigator.of(context)..pop()..pop();
               ScaffoldMessenger.of(context).showSnackBar(

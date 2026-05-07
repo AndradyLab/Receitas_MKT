@@ -6,9 +6,6 @@ import 'package:intl/intl.dart';
 
 import '../../data/cash_log_model.dart';
 import '../../logic/cash_logic_provider.dart';
-import '../form/form_view.dart';
-import '../logs/logs_view.dart';
-import '../settings/settings_view.dart';
 import '../widgets/shared_widgets.dart';
 
 class HomeView extends ConsumerStatefulWidget {
@@ -61,9 +58,8 @@ class _HomeViewState extends ConsumerState<HomeView>
     super.build(context);
 
     final initialBalanceAsync = ref.watch(initialBalanceProvider);
-    final cashLogsAsync = ref.watch(cashLogsProvider);
+    final cashLogsAsync = ref.watch(cashLogsProvider(true));
 
-    // Combina os dois estados assíncronos para calcular o saldo total
     return initialBalanceAsync.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (err, stack) => Scaffold(body: Center(child: Text('Erro: $err'))),
@@ -262,7 +258,7 @@ class _HomeViewState extends ConsumerState<HomeView>
   Future<void> _runSync() async {
     try {
       final synced = await ref.read(syncControllerProvider).syncPendingLogs();
-      ref.read(cashLogsProvider.notifier).loadAllLogs();
+      ref.read(cashLogsProvider(false).notifier).loadAllLogs();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$synced sincronizados')));
       }

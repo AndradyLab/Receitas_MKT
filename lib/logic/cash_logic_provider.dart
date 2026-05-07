@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/cash_log_model.dart';
 import '../data/local_database.dart';
@@ -131,23 +132,30 @@ class CashLogsState extends Equatable {
   List<Object?> get props => [logs, pendingCount];
 }
 
-/// Provider para os logs de caixa
-final cashLogsProvider = AsyncNotifierProvider<CashLogsNotifier, CashLogsState>(
+final cashLogsProvider = AsyncNotifierProvider.family<CashLogsNotifier, CashLogsState, bool>(
   CashLogsNotifier.new,
 );
 
-/// AsyncNotifier para gerenciar os logs de caixa
-class CashLogsNotifier extends AsyncNotifier<CashLogsState> {
+class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
   DatabaseHelper get _database => ref.read(databaseProvider);
   SheetsService get _sheetsService => ref.read(sheetsServiceProvider);
   SyncController get _syncController => ref.read(syncControllerProvider);
 
   @override
-  Future<CashLogsState> build() async {
+  Future<CashLogsState> build(bool isRecent) async {
+    if (isRecent) {
+      return _fetchRecentState();
+    }
     return _fetchState();
   }
 
   Future<CashLogsState> _fetchState() async {
+    final logs = await _database.getAllCashLogs();
+    final pendingCount = await _database.countPendingLogs();
+    return CashLogsState(logs: logs, pendingCount: pendingCount);
+  }
+
+  Future<CashLogsState> _fetchRecentState() async {
     final logs = await _database.getRecentLogs();
     final pendingCount = await _database.countPendingLogs();
     return CashLogsState(logs: logs, pendingCount: pendingCount);
@@ -163,6 +171,15 @@ class CashLogsNotifier extends AsyncNotifier<CashLogsState> {
   Future<void> loadAllLogs() async {
     state = const AsyncLoading();
     try {
+      state = AsyncValue.data(await _fetchRecentState());
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
+    }
+  }
+
+  Future<void> loadRecentLogs() async {
+    state = const AsyncLoading();
+    try {
       state = AsyncValue.data(await _fetchState());
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
@@ -176,6 +193,7 @@ class CashLogsNotifier extends AsyncNotifier<CashLogsState> {
     try {
       await _database.insertCashLog(log);
       await _syncController.queueForSync(log);
+      CashLogsState tes = await _fetchState();
       state = AsyncValue.data(await _fetchState());
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);

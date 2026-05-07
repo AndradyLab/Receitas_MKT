@@ -120,31 +120,31 @@ class DatabaseHelper {
     await batch.commit();
   }
 
-  /// Leitura de todos os logs
   Future<List<CashLog>> getAllCashLogs() async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(_tableName);
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      _tableName,
+      orderBy: 'date DESC',
+    );
     return List.generate(maps.length, (i) => CashLog.fromMap(maps[i]));
   }
 
   Future<List<CashLog>> getRecentLogs({int limit = 5}) async {
     final db = await database;
 
-    // Busca no banco os itens mais recentes (Data Decrescente)
     final List<Map<String, dynamic>> maps = await db.query(
       _tableName,
-      orderBy: 'date ASC',
+      orderBy: 'date DESC',
       limit: limit,
     );
 
-    // Converte para a lista de CashLog
     List<CashLog> recentLogs = List.generate(
       maps.length,
           (i) => CashLog.fromMap(maps[i]),
     );
 
-    // Inverte a lista (o mais recente vai pro final, o mais antigo pro começo)
-    return recentLogs.reversed.toList();
+    return recentLogs.toList();
   }
 
   /// Leitura de logs filtrados por tipo

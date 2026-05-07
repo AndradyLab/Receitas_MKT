@@ -254,7 +254,7 @@ class _FormViewState extends ConsumerState<FormView> {
       final products = _productsController.text.split(',').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
 
       final log = CashLog(
-        id: const Uuid().v4(), // Usando UUID para gerar ID único
+        id: const Uuid().v4(),
         type: _selectedType,
         photoPath: _photoPath,
         amount: amount,
@@ -264,14 +264,24 @@ class _FormViewState extends ConsumerState<FormView> {
         isSynced: false,
       );
 
-      await ref.read(cashLogsProvider.notifier).addLog(log);
+      await ref.read(cashLogsProvider(false).notifier).addLog(log);
 
-      if (mounted) {
-        Navigator.pop(context);
+      if (!mounted) return;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Salvo com sucesso!'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Salvo com sucesso!')),
         );
-      }
+        _amountController.clear();
+        _employeeController.clear();
+        _productsController.clear();
+
+        setState(() {
+          _photoPath = null;
+          _selectedDate = DateTime.now();
+          _selectedType = CashType.ingress;
+        });
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
