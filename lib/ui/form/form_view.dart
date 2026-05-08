@@ -18,46 +18,40 @@ class FormView extends ConsumerStatefulWidget {
 
 class _FormViewState extends ConsumerState<FormView> {
   final ImagePicker _picker = ImagePicker();
-  final Uuid _uuid = const Uuid();
 
   late final TextEditingController _amountController;
   late final TextEditingController _employeeController;
-  late final TextEditingController _productsController;
+  late final TextEditingController _observationController;
   late final TextEditingController _dateController;
 
   CashType _selectedType = CashType.ingress;
   String? _photoPath;
   DateTime _selectedDate = DateTime.now();
-  bool _isFormValid = false;
   bool _isSubmitting = false;
+  String? _amountError;
+  String? _employeeError;
 
   @override
   void initState() {
     super.initState();
     _amountController = TextEditingController();
     _employeeController = TextEditingController();
-    _productsController = TextEditingController();
+    _observationController = TextEditingController();
     _dateController = TextEditingController();
 
-    _dateController.text = DateFormat('dd/MM/yyyy HH:mm').format(_selectedDate);
+    _dateController.text = DateFormat('dd/MM/yyyy').format(_selectedDate);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    });
   }
 
   @override
   void dispose() {
     _amountController.dispose();
     _employeeController.dispose();
-    _productsController.dispose();
+    _observationController.dispose();
     _dateController.dispose();
     super.dispose();
-  }
-
-  void _updateFormValidation() {
-    final amount = double.tryParse(_amountController.text.replaceAll(',', '.'));
-    final employee = _employeeController.text.trim();
-
-    setState(() {
-      _isFormValid = amount != null && employee.isNotEmpty;
-    });
   }
 
   @override
@@ -65,15 +59,6 @@ class _FormViewState extends ConsumerState<FormView> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_selectedType == CashType.ingress ? 'Nova Receita' : 'Novo Gasto'),
-        actions: [
-          if (_isSubmitting)
-            const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
-          else
-            IconButton(
-              icon: const Icon(Icons.save),
-              onPressed: _isFormValid ? _saveLog : null,
-            ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -85,12 +70,16 @@ class _FormViewState extends ConsumerState<FormView> {
             const SizedBox(height: 16),
             _buildEmployeeField(),
             const SizedBox(height: 16),
-            _buildProductsField(),
+            _buildObservationField(),
             const SizedBox(height: 16),
             _buildDateField(),
             const SizedBox(height: 16),
             _buildPhotoField(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: _isSubmitting ? null : _saveLog,
+              child: const Text('Salvar Registro'),
+            )
           ],
         ),
       ),
@@ -128,13 +117,18 @@ class _FormViewState extends ConsumerState<FormView> {
       child: TextField(
         controller: _amountController,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           labelText: 'Valor',
           prefixText: 'R\$ ',
-          border: OutlineInputBorder(),
-          suffixIcon: Icon(Icons.attach_money),
+          errorText: _amountError,
+          border: const OutlineInputBorder(),
+          suffixIcon: const Icon(Icons.attach_money),
         ),
-        onChanged: (_) => _updateFormValidation(),
+        onChanged: (value) {
+          if (_amountError != null) {
+            setState(() => _amountError = null);
+          }
+        }
       ),
     );
   }
@@ -143,24 +137,29 @@ class _FormViewState extends ConsumerState<FormView> {
     return Card(
       child: TextField(
         controller: _employeeController,
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           labelText: 'Funcionário',
-          border: OutlineInputBorder(),
-          suffixIcon: Icon(Icons.person),
+          border: const OutlineInputBorder(),
+          suffixIcon: const Icon(Icons.person),
+          errorText: _employeeError
         ),
-        onChanged: (_) => _updateFormValidation(),
+        onChanged: (value) {
+          if (_employeeError != null) {
+            setState(() => _employeeError = null);
+          }
+        },
       ),
     );
   }
 
-  Widget _buildProductsField() {
+  Widget _buildObservationField() {
     return Card(
       child: TextField(
-        controller: _productsController,
+        controller: _observationController,
         decoration: const InputDecoration(
-          labelText: 'Produtos (opcional)',
+          labelText: 'Observação (opcional)',
           border: OutlineInputBorder(),
-          suffixIcon: Icon(Icons.production_quantity_limits),
+          suffixIcon: Icon(Icons.question_answer),
         ),
       ),
     );
@@ -174,7 +173,7 @@ class _FormViewState extends ConsumerState<FormView> {
           child: TextField(
             controller: _dateController,
             decoration: const InputDecoration(
-              labelText: 'Data e Hora',
+              labelText: 'Data',
               border: OutlineInputBorder(),
               suffixIcon: Icon(Icons.calendar_today),
             ),
@@ -208,7 +207,6 @@ class _FormViewState extends ConsumerState<FormView> {
     );
   }
 
-  // Lógica de manipulação de dados
   Future<void> _selectDate() async {
     final pickedDate = await showDatePicker(
       context: context,
@@ -218,17 +216,12 @@ class _FormViewState extends ConsumerState<FormView> {
     );
 
     if (pickedDate != null && mounted) {
-      final pickedTime = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.fromDateTime(_selectedDate),
-      );
+      final pickedTime = TimeOfDay.fromDateTime(_selectedDate);
 
-      if (pickedTime != null) {
-        setState(() {
-          _selectedDate = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, pickedTime.hour, pickedTime.minute);
-          _dateController.text = DateFormat('dd/MM/yyyy HH:mm').format(_selectedDate);
-        });
-      }
+      setState(() {
+        _selectedDate = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, pickedTime.hour, pickedTime.minute);
+        _dateController.text = DateFormat('dd/MM/yyyy').format(_selectedDate);
+      });
     }
   }
 
@@ -242,24 +235,45 @@ class _FormViewState extends ConsumerState<FormView> {
     if (file != null) setState(() => _photoPath = file.path);
   }
 
-  void _clearPhoto() => setState(() => _photoPath = null);
 
   Future<void> _saveLog() async {
     if (_isSubmitting) return;
+
+    final cleanAmountText = _amountController.text.replaceAll(',', '.');
+    final newAmount = double.tryParse(cleanAmountText);
+    final newEmployee = _employeeController.text.trim();
+    final obsText = _observationController.text.trim();
+    final finalObservation = obsText.isEmpty ? null : obsText;
+
+    bool hasError = false;
+
+    setState(() {
+      _amountError = null;
+      _employeeError = null;
+
+      if (newAmount == null || newAmount <= 0) {
+        _amountError = 'Digite um número válido';
+        hasError = true;
+      }
+
+      if (newEmployee.isEmpty) {
+        _employeeError = 'Digite o nome do funcionário';
+        hasError = true;
+      }
+    });
+
+    if (hasError) return;
+
     setState(() => _isSubmitting = true);
 
     try {
-      final amount = double.parse(_amountController.text.replaceAll(',', '.'));
-      final employee = _employeeController.text.trim();
-      final products = _productsController.text.split(',').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
-
       final log = CashLog(
         id: const Uuid().v4(),
         type: _selectedType,
         photoPath: _photoPath,
-        amount: amount,
-        products: products,
-        employeeName: employee,
+        amount: newAmount!,
+        observation: finalObservation,
+        employeeName: newEmployee,
         date: _selectedDate,
         isSynced: false,
       );
@@ -270,11 +284,14 @@ class _FormViewState extends ConsumerState<FormView> {
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Salvo com sucesso!')),
+          const SnackBar(
+            content: Text('Salvo com sucesso!'),
+          ),
         );
+
         _amountController.clear();
         _employeeController.clear();
-        _productsController.clear();
+        _observationController.clear();
 
         setState(() {
           _photoPath = null;

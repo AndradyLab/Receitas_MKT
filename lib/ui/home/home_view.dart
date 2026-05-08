@@ -34,9 +34,6 @@ class _HomeViewState extends ConsumerState<HomeView>
     );
 
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initSync();
-    });
   }
 
   @override
@@ -45,13 +42,13 @@ class _HomeViewState extends ConsumerState<HomeView>
     super.dispose();
   }
 
-  Future<void> _initSync() async {
-    final syncController = ref.read(syncControllerProvider);
-    final hasPending = await syncController.hasPendingLogs();
-    if (hasPending && mounted) {
-      _showSyncStatus();
-    }
-  }
+  // Future<void> _initSync() async {
+  //   final syncController = ref.read(syncControllerProvider);
+  //   final hasPending = await syncController.hasPendingLogs();
+  //   if (hasPending && mounted) {
+  //     _showSyncStatus();
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -241,31 +238,32 @@ class _HomeViewState extends ConsumerState<HomeView>
     );
   }
   //TODO
-  void _showSyncStatus() {
-    final syncController = ref.read(syncControllerProvider);
-    syncController.getPendingCount().then((count) {
-      if (count > 0 && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$count registro(s) pendentes'),
-            action: SnackBarAction(label: 'Sincronizar', onPressed: _runSync),
-          ),
-        );
-      }
-    });
-  }
+  // void _showSyncStatus() {
+  //   final syncController = ref.read(syncControllerProvider);
+  //   syncController.getPendingCount().then((count) {
+  //     if (count > 0 && mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           behavior: SnackBarBehavior.floating,
+  //           content: Text('$count registro(s) pendentes'),
+  //           action: SnackBarAction(label: 'Sincronizar', onPressed: _runSync),
+  //         ),
+  //       );
+  //     }
+  //   });
+  // }
 
-  Future<void> _runSync() async {
-    try {
-      final synced = await ref.read(syncControllerProvider).syncPendingLogs();
-      ref.read(cashLogsProvider(false).notifier).loadAllLogs();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$synced sincronizados')));
-      }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e')));
-    }
-  }
+  // Future<void> _runSync() async {
+  //   try {
+  //     final synced = await ref.read(syncControllerProvider).syncPendingLogs();
+  //     ref.read(cashLogsProvider(false).notifier).loadAllLogs();
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$synced sincronizados')));
+  //     }
+  //   } catch (e) {
+  //     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e')));
+  //   }
+  // }
 
   Future<void> _showTransactionDetails(CashLog log) async {
     showDialog(

@@ -29,14 +29,11 @@ final syncControllerProvider = Provider<SyncController>((ref) {
 // INITIAL BALANCE (Novo Padrão)
 // ==========================================
 
-/// Provider para o saldo inicial (Agora é AsyncNotifier)
 final initialBalanceProvider = AsyncNotifierProvider<InitialBalanceNotifier, double?>(
   InitialBalanceNotifier.new,
 );
 
-/// AsyncNotifier para gerenciar o saldo inicial
 class InitialBalanceNotifier extends AsyncNotifier<double?> {
-  // ✅ CORREÇÃO 3: Sem o .requireValue
   DatabaseHelper get _database => ref.read(databaseProvider);
   SheetsService get _sheetsService => ref.read(sheetsServiceProvider);
 
@@ -186,14 +183,12 @@ class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
     }
   }
 
-  /// Adiciona um novo log
   Future<void> addLog(CashLog log) async {
     state = const AsyncLoading();
 
     try {
       await _database.insertCashLog(log);
       await _syncController.queueForSync(log);
-      CashLogsState tes = await _fetchState();
       state = AsyncValue.data(await _fetchState());
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);

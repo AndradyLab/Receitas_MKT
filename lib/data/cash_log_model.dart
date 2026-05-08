@@ -29,7 +29,7 @@ class CashLog with EquatableMixin {
   final CashType type;
   final String? photoPath;
   final double amount;
-  final List<String> products;
+  final String? observation;
   final String employeeName;
   final DateTime date;
   final bool isSynced;
@@ -39,18 +39,17 @@ class CashLog with EquatableMixin {
     required this.type,
     this.photoPath,
     required this.amount,
-    required this.products,
+    required this.observation,
     required this.employeeName,
     required this.date,
     this.isSynced = false,
   });
 
-  /// Cria um novo log com ID gerado automaticamente
   factory CashLog.create({
     required CashType type,
     String? photoPath,
     required double amount,
-    List<String> products = const [],
+    String? observation,
     required String employeeName,
     DateTime? date,
     bool isSynced = false,
@@ -60,20 +59,19 @@ class CashLog with EquatableMixin {
       type: type,
       photoPath: photoPath,
       amount: amount,
-      products: products,
+      observation: observation,
       employeeName: employeeName,
       date: date ?? DateTime.now(),
       isSynced: isSynced,
     );
   }
 
-  /// Cria uma cópia do log com campos atualizados
   CashLog copyWith({
     String? id,
     CashType? type,
     String? photoPath,
     double? amount,
-    List<String>? products,
+    String? observation,
     String? employeeName,
     DateTime? date,
     bool? isSynced,
@@ -83,21 +81,20 @@ class CashLog with EquatableMixin {
       type: type ?? this.type,
       photoPath: photoPath ?? this.photoPath,
       amount: amount ?? this.amount,
-      products: products ?? this.products,
+      observation: observation ?? this.observation,
       employeeName: employeeName ?? this.employeeName,
       date: date ?? this.date,
       isSynced: isSynced ?? this.isSynced,
     );
   }
 
-  /// Converte o objeto para um Map (para armazenamento no banco)
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'type': type.index,
       'photoPath': photoPath,
       'amount': amount,
-      'products': jsonEncode(products),
+      'products': observation,
       'employeeName': employeeName,
       'date': date.toIso8601String(),
       'isSynced': isSynced ? 1 : 0,
@@ -111,14 +108,13 @@ class CashLog with EquatableMixin {
       type: CashType.values[map['type'] ?? 0],
       photoPath: map['photoPath'],
       amount: map['amount'],
-      products: List<String>.from(jsonDecode(map['products'])),
+      observation: map['observation'],
       employeeName: map['employeeName'],
       date: DateTime.parse(map['date']),
       isSynced: map['isSynced'] == 1,
     );
   }
 
-  /// Converte o objeto para JSON (para envio ao Google Sheets)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -126,7 +122,7 @@ class CashLog with EquatableMixin {
       'typeDisplay': type.displayName,
       'photoPath': photoPath,
       'amount': amount,
-      'products': products.join(', '),
+      'products': observation,
       'employeeName': employeeName,
       'date': date.toIso8601String(),
       'isSynced': isSynced,
@@ -139,7 +135,7 @@ class CashLog with EquatableMixin {
         type,
         photoPath,
         amount,
-        products,
+        observation,
         employeeName,
         date,
         isSynced,
@@ -147,6 +143,6 @@ class CashLog with EquatableMixin {
 
   @override
   String toString() {
-    return 'CashLog(id: $id, type: $type, amount: $amount, products: $products, employee: $employeeName, date: $date, synced: $isSynced)';
+    return 'CashLog(id: $id, type: $type, amount: $amount, observation: $observation, employee: $employeeName, date: $date, synced: $isSynced)';
   }
 }

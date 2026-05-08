@@ -121,11 +121,8 @@ class LogsView extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  log.products.isEmpty
-                      ? 'Sem produtos'
-                      : log.products.length > 3
-                      ? '${log.products.take(3).join(', ')} e mais'
-                      : log.products.join(', '),
+                  (log.observation == null || log.observation!.isEmpty)
+                  ? 'Sem observação' : log.observation!,
                   style: Theme.of(context).textTheme.labelSmall,
                 ),
                 const SizedBox(height: 4),
@@ -173,7 +170,6 @@ class LogsView extends ConsumerWidget {
     final TextEditingController controller = TextEditingController();
     List<CashLog> filteredLogs = [];
     SearchFilter currentFilter = SearchFilter.employee;
-
     return showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -189,8 +185,6 @@ class LogsView extends ConsumerWidget {
                   decoration: InputDecoration(
                     hintText: currentFilter == SearchFilter.employee
                         ? 'Nome do funcionário...'
-                        : currentFilter == SearchFilter.product
-                        ? 'Nome do produto: Pão, Desodorante...'
                         : 'Buscar por data: dia/mês/ano',
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: PopupMenuButton<SearchFilter>(
@@ -210,10 +204,6 @@ class LogsView extends ConsumerWidget {
                           child: Text('Funcionário'),
                         ),
                         const PopupMenuItem<SearchFilter>(
-                          value: SearchFilter.product,
-                          child: Text('Produto'),
-                        ),
-                        const PopupMenuItem<SearchFilter>(
                           value: SearchFilter.date,
                           child: Text('Data'),
                         ),
@@ -226,7 +216,6 @@ class LogsView extends ConsumerWidget {
                     if (value.isNotEmpty && currentState != null) {
                       final results = currentState.logs.where((log) => switch (currentFilter) {
                         SearchFilter.employee => log.employeeName.toLowerCase().contains(value.toLowerCase()),
-                        SearchFilter.product  => log.products.any((p) => p.toLowerCase().contains(value)),
                         SearchFilter.date     => DateFormat('dd/MM/yyyy').format(log.date).contains(value),                      }).toList();
                       setState(() => filteredLogs = results);
                     } else {
@@ -249,7 +238,11 @@ class LogsView extends ConsumerWidget {
                             return ListTile(
                               leading: CashTypeBadge(type: log.type),
                               title: Text(log.employeeName),
-                              subtitle: Text(log.products.join(', ')),
+                              subtitle: Text(
+                                log.observation ?? 'Sem observação',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                               trailing: Text(NumberFormat.currency(
                                       locale: 'pt_BR', symbol: 'R\$')
                                   .format(log.amount)),
@@ -304,8 +297,8 @@ class LogsView extends ConsumerWidget {
               _buildDetailRow(context, 'Valor', formatter.format(log.amount)),
               _buildDetailRow(context, 'Funcionário', log.employeeName),
               _buildDetailRow(context, 'Data', _formatDate(log.date)),
-              if (log.products.isNotEmpty)
-                _buildDetailRow(context, 'Produtos', log.products.join(', ')),
+              if (log.observation != null)
+                _buildDetailRow(context, 'Observação', log.observation!),
               if (log.photoPath != null)
                 _buildDetailRow(context, 'Nota Fiscal', log.photoPath!.split('/').last),
             ],
@@ -338,7 +331,7 @@ class LogsView extends ConsumerWidget {
   Future<void> _editLog(BuildContext context, WidgetRef ref, CashLog log) async {
     final TextEditingController amountController = TextEditingController(text: log.amount.toString());
     final TextEditingController employeeController = TextEditingController(text: log.employeeName);
-    final TextEditingController productsController = TextEditingController(text: log.products.join(', '));
+    final TextEditingController observationController = TextEditingController(text: log.observation);
 
     final ImagePicker picker = ImagePicker();
 
@@ -446,10 +439,10 @@ class LogsView extends ConsumerWidget {
                     ),
                     const SizedBox(height: 16),
                     TextField(
-                      controller: productsController,
+                      controller: observationController,
                       decoration: const InputDecoration(
-                        labelText: 'Produtos',
-                        hintText: 'Separe os itens por vírgula: Pão, Chocolate',
+                        labelText: 'Observação',
+                        hintText: 'Digite sua observação',
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -549,6 +542,8 @@ class LogsView extends ConsumerWidget {
                             final cleanAmountText = amountController.text.replaceAll(',', '.');
                             final newAmount = double.tryParse(cleanAmountText);
                             final newEmployee = employeeController.text.trim();
+                            final obsText = observationController.text.trim();
+                            final finalObservation = obsText.isEmpty ? null : obsText;
 
                             if (newAmount == null || newAmount <= 0) {
                               setState(() {
@@ -564,19 +559,13 @@ class LogsView extends ConsumerWidget {
                               return;
                             }
 
-                            final newProducts = productsController.text
-                                .split(',')
-                                .map((e) => e.trim())
-                                .where((e) => e.isNotEmpty)
-                                .toList();
-
                             if (newEmployee.isNotEmpty) {
                               final updatedLog = log.copyWith(
                                 amount: newAmount,
                                 employeeName: newEmployee,
                                 type: selectedType,
                                 date: selectedDate,
-                                products: newProducts,
+                                observation: finalObservation,
                                 photoPath: selectedPhotoPath,
                               );
 
@@ -642,7 +631,6 @@ class LogsView extends ConsumerWidget {
     context.go('/form');
   }
 
-  // TODO: Alterar para DATE quando mexer no forms
   String _formatDate(DateTime date) {
     return DateFormat('dd/MM/yyyy').format(date);
   }
@@ -666,4 +654,4 @@ class LogsView extends ConsumerWidget {
   }
 }
 
-enum SearchFilter { employee, product, date }
+enum SearchFilter { employee, date }

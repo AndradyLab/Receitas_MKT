@@ -47,14 +47,13 @@ class DatabaseHelper {
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    // Tabela de logs de caixa
     await db.execute('''
       CREATE TABLE $_tableName (
         id TEXT PRIMARY KEY,
         type INTEGER NOT NULL,
         photoPath TEXT,
         amount REAL NOT NULL,
-        products TEXT NOT NULL,
+        observation TEXT NOT NULL,
         employeeName TEXT NOT NULL,
         date TEXT NOT NULL,
         isSynced INTEGER NOT NULL DEFAULT 0
