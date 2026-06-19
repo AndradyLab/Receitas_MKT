@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:receitas_mkt/data/sheets_service.dart';
 import 'package:receitas_mkt/logic/cash_logic_provider.dart';
 import 'package:receitas_mkt/logic/sync_controller.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsView extends ConsumerStatefulWidget {
   const SettingsView({super.key});
@@ -61,14 +62,14 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
           ListTile(
             title: const Text('Link da Planilha'),
             subtitle: const Text('Clique para configurar'),
-            trailing: const Icon(Icons.edit),
+            leading: const Icon(Icons.edit),
             onTap: () => _showSheetsLinkDialog(context),
           ),
           const Divider(),
           ListTile(
             title: const Text('Credenciais do Serviço'),
             subtitle: const Text('JSON das credenciais'),
-            trailing: const Icon(Icons.file_copy),
+            leading: const Icon(Icons.file_copy),
             onTap: () => _showCredentialsDialog(context),
           ),
         ],
@@ -83,13 +84,13 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
           ListTile(
             title: const Text('Apagar Configurações da Planilha'),
             subtitle: const Text('Apagar o link da planilha e as credenciais.'),
-            trailing: const Icon(Icons.chevron_right),
+            leading: const Icon(Icons.delete),
             onTap: () => _showResetDialog(context, ref),
           ),
           ListTile(
             title: const Text('Apagar Histórico de transações'),
             subtitle: const Text('Toda a base de dados será destruída e nenhum dado ficará salvo no sistema'),
-            trailing: const Icon(Icons.chevron_right),
+            leading: const Icon(Icons.delete_forever),
             onTap: () => _showResetDatabase(context, ref),
           ),
 
@@ -362,16 +363,11 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Cash Flow Marketing'),
+            Text('Receitas Marketing'),
             SizedBox(height: 8),
             Text('Versão: 1.0.0'),
             SizedBox(height: 8),
             Text('Gerenciador de fluxo de caixa para área de marketing'),
-            SizedBox(height: 16),
-            Text('Tecnologias:'),
-            Text('- Flutter + Riverpod'),
-            Text('- SQLite (offline-first)'),
-            Text('- Google Sheets (sincronização)'),
           ],
         ),
         actions: [
@@ -389,13 +385,23 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Suporte'),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Para suporte, entre em contato com:'),
-            SizedBox(height: 8),
-            Text('- Email: suporte@cashflow.com'),
-            Text('- WhatsApp: (11) 99999-9999'),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.email_outlined, color: Colors.blue),
+              title: const Text('Email'),
+              subtitle: const Text('viniciusandradeprog@gmail.com'),
+              onTap: () => _openLink(context, 'mailto:viniciusandradeprog@gmail.com'),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.chat_outlined, color: Colors.green),
+              title: const Text('WhatsApp'),
+              subtitle: const Text('(85) 99278-4784'),
+              onTap: () => _openLink(context, 'https://wa.me/5585992784784'),
+            ),
           ],
         ),
         actions: [
@@ -406,5 +412,32 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
         ],
       ),
     );
+  }
+
+  Future<void> _openLink(BuildContext context, String url) async {
+    final Uri uri = Uri.parse(url);
+
+    try {
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+
+        if (!context.mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nenhum aplicativo encontrado para abrir este link.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erro inesperado ao tentar abrir o link.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

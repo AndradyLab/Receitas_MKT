@@ -4,8 +4,6 @@ import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:receitas_mkt/logic/router.dart';
 
-// Importe as telas se for necessário inicializar algo mais aqui,
-// caso contrário, o router.dart já está cuidando delas.
 import 'data/local_database.dart';
 import 'logic/cash_logic_provider.dart';
 
