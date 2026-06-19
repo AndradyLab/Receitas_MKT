@@ -194,6 +194,13 @@ class DatabaseHelper {
     );
   }
 
+  Future<void> deleteAllLogs() async {
+    final db = await database;
+
+    await db.delete('cash_logs');
+    await db.delete('app_config');
+  }
+
   /// Deleta um log pelo ID
   Future<void> deleteCashLog(String id) async {
     final db = await database;

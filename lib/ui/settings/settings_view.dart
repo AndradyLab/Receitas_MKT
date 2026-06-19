@@ -24,14 +24,14 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          _buildSectionTitle(context, 'Google Sheets'),
+          _buildSectionTitle(context, 'Google Planilha'),
           _buildSheetsConfig(context, ref),
-          const SizedBox(height: 24),
-          _buildSectionTitle(context, 'Account'),
-          _buildAccountSection(context, ref),
           const SizedBox(height: 24),
           _buildSectionTitle(context, 'Sincronização'),
           _buildSyncSection(context, ref),
+          const SizedBox(height: 24),
+          _buildSectionTitle(context, 'Sistema'),
+          _buildSystemSection(context, ref),
           const SizedBox(height: 24),
           _buildSectionTitle(context, 'Sobre'),
           _buildAboutSection(context),
@@ -66,7 +66,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
           ),
           const Divider(),
           ListTile(
-            title: const Text('Credenciais Service Account'),
+            title: const Text('Credenciais do Serviço'),
             subtitle: const Text('JSON das credenciais'),
             trailing: const Icon(Icons.file_copy),
             onTap: () => _showCredentialsDialog(context),
@@ -76,16 +76,23 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
     );
   }
 
-  Widget _buildAccountSection(BuildContext context, WidgetRef ref) {
+  Widget _buildSystemSection(BuildContext context, WidgetRef ref) {
     return Card(
       child: Column(
         children: [
           ListTile(
-            title: const Text('Sistema'),
-            subtitle: const Text('Versão: 1.0.0'),
+            title: const Text('Apagar Configurações da Planilha'),
+            subtitle: const Text('Apagar o link da planilha e as credenciais.'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showResetDialog(context, ref),
           ),
+          ListTile(
+            title: const Text('Apagar Histórico de transações'),
+            subtitle: const Text('Toda a base de dados será destruída e nenhum dado ficará salvo no sistema'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showResetDatabase(context, ref),
+          ),
+
         ],
       ),
     );
@@ -152,14 +159,16 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
   }
 
   Future<void> _showSheetsLinkDialog(BuildContext context) async {
-    final TextEditingController controller = TextEditingController();
-    final SheetsService sheetsService = SheetsService();
-    final ref = this.ref;
+    final sheetsService = ref.read(sheetsServiceProvider);
+    final savedLink = await sheetsService.getSheetsLink();
+
+    final TextEditingController controller = TextEditingController(text: savedLink ?? '');
+    if (!context.mounted) return;
 
     return showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Configurar Google Sheets'),
+        title: const Text('Configurar Google Planilhas'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -190,8 +199,6 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                   const SnackBar(content: Text('Planilha configurada com sucesso')),
                 );
                 Navigator.pop(dialogContext);
-                // Recarrega o provider de logs após configurar
-                ref.read(cashLogsProvider(false).notifier).loadAllLogs();
               } else {
                 ScaffoldMessenger.of(dialogContext).showSnackBar(
                   const SnackBar(content: Text('Link inválido. Tente novamente.')),
@@ -206,20 +213,23 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
   }
 
   Future<void> _showCredentialsDialog(BuildContext context) async {
-    final TextEditingController controller = TextEditingController();
-    final ref = this.ref;
+    final SheetsService sheetsService = ref.read(sheetsServiceProvider);
 
+    final savedCredentials = await sheetsService.getCredentials();
+
+    final TextEditingController controller = TextEditingController(text: savedCredentials ?? '');
+    if (!context.mounted) return;
     return showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Credenciais Service Account'),
+        title: const Text('Credenciais da Planilha'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: controller,
               decoration: const InputDecoration(
-                hintText: 'Cole as credenciais JSON',
+                hintText: 'Cole as credenciais',
                 labelText: 'JSON das Credenciais',
               ),
               maxLines: 5,
@@ -235,14 +245,12 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
             onPressed: () async {
               final json = controller.text.trim();
               if (json.isNotEmpty) {
-                final sheetsService = SheetsService();
+                final sheetsService = ref.read(sheetsServiceProvider);
                 sheetsService.saveCredentials(json);
                 Navigator.pop(dialogContext);
                 ScaffoldMessenger.of(dialogContext).showSnackBar(
                   const SnackBar(content: Text('Credenciais salvas com sucesso')),
                 );
-                // Recarrega o provider de logs após configurar
-                ref.read(cashLogsProvider(false).notifier).loadAllLogs();
               }
             },
             child: const Text('Salvar'),
@@ -294,13 +302,44 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
           ),
           ElevatedButton(
             onPressed: () async {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.clear();
+              await ref.read(cashLogsProvider(false).notifier).resetCredentials();
 
               if (mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Dados resetados. Reinicie o app.')),
+                  const SnackBar(content: Text('Seus dados da planilha foram resetados.')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Apagar Tudo'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showResetDatabase(BuildContext context, WidgetRef ref) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir base de dados'),
+        content: const Text("Deseja exluir toda sua base de dados?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await ref.read(cashLogsProvider(false).notifier).resetFullDBApplication();
+
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Seus dados foram excluídos com sucesso.')),
                 );
               }
             },

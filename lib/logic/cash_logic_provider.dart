@@ -39,11 +39,15 @@ class InitialBalanceNotifier extends AsyncNotifier<double?> {
 
   @override
   Future<double?> build() async {
-    // Tenta carregar do Google Sheets primeiro
-    final sheetsBalance = await _sheetsService.loadInitialBalance();
-    if (sheetsBalance != null) {
-      return sheetsBalance;
-    }
+    try{
+      // Tenta carregar do Google Sheets primeiro
+      final sheetsBalance = await _sheetsService.loadInitialBalance();
+
+      if (sheetsBalance != null) {
+        return sheetsBalance;
+      }
+    }catch (_) {}
+
 
     // Fallback para cache local
     final cachedBalance = await _database.getCachedInitialBalance();
@@ -151,6 +155,33 @@ class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
     final pendingCount = await _database.countPendingLogs();
     return CashLogsState(logs: logs, pendingCount: pendingCount);
   }
+
+  Future<void> resetFullDBApplication() async {
+    state = const AsyncLoading();
+
+    try {
+      await _database.deleteAllLogs();
+
+      ref.invalidate(cashLogsProvider);
+      ref.invalidate(initialBalanceProvider);
+
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
+    }
+  }
+
+  Future<void> resetCredentials() async {
+    state = const AsyncLoading();
+
+    try {
+      await _sheetsService.clearCredentials();
+
+    } catch (e, _) {
+      throw Exception('Erro ao apagar credenciais: $e');
+    }
+  }
+
+
 
   Future<CashLogsState> _fetchRecentState() async {
     final logs = await _database.getRecentLogs();

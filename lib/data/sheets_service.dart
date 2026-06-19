@@ -36,8 +36,10 @@ class SheetsService {
   String? _credentialsJson;
   String? _spreadsheetId;
 
-  void saveSheetsLink(String link) {
+  Future<void> saveSheetsLink(String link) async {
     _sheetsLink = link;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_configKey, link);
   }
 
   Future<String?> getSheetsLink() async {
@@ -47,8 +49,10 @@ class SheetsService {
     return _sheetsLink;
   }
 
-  void saveCredentials(String json) {
+  Future<void> saveCredentials(String json) async {
     _credentialsJson = json;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_credentialsKey, json);
   }
 
   Future<String?> getCredentials() async {
@@ -58,8 +62,10 @@ class SheetsService {
     return _credentialsJson;
   }
 
-  void saveSpreadsheetId(String id) {
+  Future<void> saveSpreadsheetId(String id) async {
     _spreadsheetId = id;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_spreadsheetIdKey, id);
   }
 
   Future<String?> getSpreadsheetId() async {
@@ -83,7 +89,7 @@ class SheetsService {
 
   static String? extractSpreadsheetId(String link) {
     final regex = RegExp(
-      r'(?:/d/|/file/d/)([a-zA-Z0-9_-]+)',
+      r'(?:/d/|/spreadsheets/d/)([a-zA-Z0-9_-]+)',
     );
     final match = regex.firstMatch(link);
     return match?.group(1);
@@ -94,7 +100,7 @@ class SheetsService {
   Future<GSheets> _authenticate() async {
     final credentialsJson = await getCredentials();
     if (credentialsJson == null) {
-      throw Exception('Credenciais do Google Sheets não configuradas');
+      throw Exception('Credenciais do Google Planilhas não configuradas');
     }
     return GSheets(credentialsJson);
   }
