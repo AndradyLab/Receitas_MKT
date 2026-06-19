@@ -189,7 +189,9 @@ class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
     try {
       await _database.insertCashLog(log);
       await _syncController.queueForSync(log);
+
       state = AsyncValue.data(await _fetchState());
+      ref.invalidate(cashLogsProvider(true));
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
     }

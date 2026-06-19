@@ -309,9 +309,7 @@ class SheetsService {
       final amountStr = safeGet(3).replaceAll(',', '.');
       final amount = double.tryParse(amountStr) ?? 0.0;
       
-      final productsStr = safeGet(4);
-      final products = productsStr.isEmpty ? <String>[] : productsStr.split(', ');
-      
+      final observation = safeGet(4);
       final employeeName = safeGet(5);
       final dateString = safeGet(6);
       final date = DateTime.tryParse(dateString) ?? DateTime.now();
@@ -326,7 +324,7 @@ class SheetsService {
         type: CashType.values[typeIndex],
         photoPath: photoPath.isEmpty ? null : photoPath,
         amount: amount,
-        observation: products,
+        observation: observation,
         employeeName: employeeName,
         date: date,
         isSynced: isSynced,
@@ -343,7 +341,7 @@ class SheetsService {
       log.type.index,
       log.type.displayName,
       log.amount,
-      log.observation.join(', '),
+      log.observation,
       log.employeeName,
       log.date.toIso8601String(),
       log.isSynced ? 'Sim' : 'Não',

@@ -35,7 +35,7 @@ class _FormViewState extends ConsumerState<FormView> {
   void initState() {
     super.initState();
     _amountController = TextEditingController();
-    _employeeController = TextEditingController();
+    _employeeController = TextEditingController(text: 'Marisa');
     _observationController = TextEditingController();
     _dateController = TextEditingController();
 
@@ -290,7 +290,7 @@ class _FormViewState extends ConsumerState<FormView> {
         );
 
         _amountController.clear();
-        _employeeController.clear();
+        _employeeController.text = "Marisa";
         _observationController.clear();
 
         setState(() {
