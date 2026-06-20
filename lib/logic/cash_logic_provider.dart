@@ -86,11 +86,9 @@ class CashLogsState extends Equatable {
     return ingress - egress;
   }
 
-  /// Filtra logs por tipo
   List<CashLog> get ingressLogs => logs.where((l) => l.type == CashType.ingress).toList();
   List<CashLog> get egressLogs => logs.where((l) => l.type == CashType.egress).toList();
 
-  /// Filtra logs por período
   List<CashLog> getByDateRange(DateTime start, DateTime end) {
     return logs
         .where((l) {

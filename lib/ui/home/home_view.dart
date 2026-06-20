@@ -42,14 +42,6 @@ class _HomeViewState extends ConsumerState<HomeView>
     super.dispose();
   }
 
-  // Future<void> _initSync() async {
-  //   final syncController = ref.read(syncControllerProvider);
-  //   final hasPending = await syncController.hasPendingLogs();
-  //   if (hasPending && mounted) {
-  //     _showSyncStatus();
-  //   }
-  // }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);

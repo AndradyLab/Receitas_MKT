@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:receitas_mkt/logic/pdf_service.dart';
 import 'package:receitas_mkt/ui/widgets/shared_widgets.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:receitas_mkt/logic/cash_logic_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -14,6 +15,27 @@ class SettingsView extends ConsumerStatefulWidget {
 }
 
 class _SettingsViewState extends ConsumerState<SettingsView> {
+  late final TextEditingController _initialDateController;
+  late final TextEditingController _finalDateController;
+  DateTime? _startDate;
+  DateTime? _endDate;
+  bool _isGeneratingPdf = false;
+  String? pdfErrorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialDateController = TextEditingController();
+    _finalDateController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _initialDateController.dispose();
+    _finalDateController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,6 +47,9 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
         children: [
           _buildSectionTitle(context, 'Sistema'),
           _buildSystemSection(context, ref),
+          const SizedBox(height: 24),
+          _buildSectionTitle(context, 'Exportação'),
+          _buildPDFSystem(context, ref),
           const SizedBox(height: 24),
           _buildSectionTitle(context, 'Sobre'),
           _buildAboutSection(context),
@@ -40,9 +65,9 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).colorScheme.primary,
+        ),
       ),
     );
   }
@@ -58,30 +83,6 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
             onTap: () => _showResetDatabase(context, ref),
           ),
 
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAboutSection(BuildContext context) {
-    return Card(
-      child: Column(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: const Text('Sobre o App'),
-            subtitle: const Text('Gerenciador de Fluxo de Caixa'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showAboutDialog(context),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.contact_support),
-            title: const Text('Suporte'),
-            subtitle: const Text('Ajuda e dúvidas frequentes'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showSupportDialog(context),
-          ),
         ],
       ),
     );
@@ -116,6 +117,216 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPDFSystem(BuildContext context, WidgetRef ref) {
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            title: const Text('Exportação em PDF'),
+            subtitle: const Text('Gerar arquivo PDF das transações.'),
+            leading: const Icon(Icons.file_download),
+            onTap: () => _showPDFGenerate(context, ref),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAboutSection(BuildContext context) {
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('Sobre o App'),
+            subtitle: const Text('Gerenciador de Fluxo de Caixa'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showAboutDialog(context),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.contact_support),
+            title: const Text('Suporte'),
+            subtitle: const Text('Ajuda e dúvidas frequentes'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showSupportDialog(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _selectDate({required bool isStart}) async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: (isStart ? _startDate : _endDate) ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+
+    if (pickedDate != null && mounted) {
+      setState(() {
+        if (isStart) {
+          _startDate = pickedDate;
+          _initialDateController.text = DateFormat('dd/MM/yyyy').format(pickedDate);
+        } else {
+          _endDate = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, 23, 59, 59);
+          _finalDateController.text = DateFormat('dd/MM/yyyy').format(pickedDate);
+        }
+      });
+    }
+  }
+
+  Future<void> _showPDFGenerate(BuildContext context, WidgetRef ref) async {
+    return showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) =>
+              AlertDialog(
+                title: const Text('Gerar PDF'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              await _selectDate(isStart: true);
+                              setDialogState(() {});
+                            },
+                            child: IgnorePointer(
+                              child: TextField(
+                                controller: _initialDateController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Início',
+                                  border: OutlineInputBorder(),
+                                  suffixIcon: Icon(Icons.calendar_today),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              await _selectDate(isStart: false);
+                              setDialogState(() {});
+                            },
+                            child: IgnorePointer(
+                              child: TextField(
+                                controller: _finalDateController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Fim',
+                                  border: OutlineInputBorder(),
+                                  suffixIcon: Icon(Icons.calendar_today),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (pdfErrorMessage != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        pdfErrorMessage!,
+                        style: const TextStyle(color: Colors.red, fontSize: 13),
+                      ),
+                    ],
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: _isGeneratingPdf ? null : () =>
+                        Navigator.pop(dialogContext),
+                    child: const Text('Cancelar'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _isGeneratingPdf
+                        ? null
+                        : () async {
+                      if (_startDate == null || _endDate == null) {
+                        setDialogState(() {
+                          pdfErrorMessage =
+                          'Selecione as duas datas.';
+                        });
+                        return;
+                      }
+
+                      setDialogState(() => _isGeneratingPdf = true);
+                      setState(() {});
+
+                      final cashState = ref
+                          .read(cashLogsProvider(false))
+                          .value;
+
+                      if (cashState == null) {
+                        setDialogState(() => _isGeneratingPdf = false);
+                        setState(() {});
+                        if (!mounted) return;
+                        setDialogState(() {
+                          pdfErrorMessage =
+                          'Dados ainda carregando, tente novamente.';
+                        });
+                        return;
+                      }
+
+                      final logsInRange = cashState.getByDateRange(
+                          _startDate!, _endDate!);
+
+                      final initialBalance = ref
+                          .read(initialBalanceProvider)
+                          .value ?? 0.0;
+                      final savedBalance = initialBalance +
+                          cashState.currentBalance;
+
+                      final pdfService = ref.read(pdfServiceProvider);
+                      final result = await pdfService.generateAndSharePDF(
+                        logs: logsInRange,
+                        currentBalance: savedBalance,
+                        startDate: _startDate!,
+                        endDate: _endDate!,
+                      );
+
+                      setDialogState(() => _isGeneratingPdf = false);
+                      setState(() {});
+
+                      if (!mounted) return;
+                      Navigator.pop(dialogContext);
+
+                      final messages = {
+                        PdfExportStatus
+                            .empty: 'Não há lançamentos nesse período.',
+                        PdfExportStatus.error: 'Erro ao gerar PDF: ${result
+                            .message}',
+                        PdfExportStatus.success: 'PDF exportado com sucesso!',
+                      };
+
+                      if (result.status != PdfExportStatus.cancelled) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(messages[result.status]!)),
+                        );
+                      }
+                    },
+                    child: _isGeneratingPdf
+                        ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                        : const Text('Gerar PDF'),
+                  ),
+                ],
+              ),
+        );
+      },
     );
   }
 
@@ -184,7 +395,6 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
 
     try {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-
         if (!context.mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
