@@ -142,13 +142,6 @@ class _HomeViewState extends ConsumerState<HomeView>
               icon: Icons.arrow_downward,
               iconColor: Colors.red,
             ),
-            const SizedBox(width: 12),
-            _DashboardCard(
-              label: 'Pendente',
-              value: cashLogsState.pendingCount.toString(),
-              icon: Icons.sync_problem,
-              iconColor: Colors.orange,
-            ),
           ],
         ),
       ],

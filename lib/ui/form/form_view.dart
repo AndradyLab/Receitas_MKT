@@ -275,7 +275,6 @@ class _FormViewState extends ConsumerState<FormView> {
         observation: finalObservation,
         employeeName: newEmployee,
         date: _selectedDate,
-        isSynced: false,
       );
 
       await ref.read(cashLogsProvider(false).notifier).addLog(log);

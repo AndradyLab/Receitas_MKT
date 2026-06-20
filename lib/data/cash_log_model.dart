@@ -32,7 +32,6 @@ class CashLog with EquatableMixin {
   final String? observation;
   final String employeeName;
   final DateTime date;
-  final bool isSynced;
 
   const CashLog({
     required this.id,
@@ -42,7 +41,6 @@ class CashLog with EquatableMixin {
     required this.observation,
     required this.employeeName,
     required this.date,
-    this.isSynced = false,
   });
 
   factory CashLog.create({
@@ -52,7 +50,6 @@ class CashLog with EquatableMixin {
     String? observation,
     required String employeeName,
     DateTime? date,
-    bool isSynced = false,
   }) {
     return CashLog(
       id: const Uuid().v4(),
@@ -62,7 +59,6 @@ class CashLog with EquatableMixin {
       observation: observation,
       employeeName: employeeName,
       date: date ?? DateTime.now(),
-      isSynced: isSynced,
     );
   }
 
@@ -74,7 +70,6 @@ class CashLog with EquatableMixin {
     String? observation,
     String? employeeName,
     DateTime? date,
-    bool? isSynced,
   }) {
     return CashLog(
       id: id ?? this.id,
@@ -84,7 +79,6 @@ class CashLog with EquatableMixin {
       observation: observation ?? this.observation,
       employeeName: employeeName ?? this.employeeName,
       date: date ?? this.date,
-      isSynced: isSynced ?? this.isSynced,
     );
   }
 
@@ -97,7 +91,6 @@ class CashLog with EquatableMixin {
       'observation': observation,
       'employeeName': employeeName,
       'date': date.toIso8601String(),
-      'isSynced': isSynced ? 1 : 0,
     };
   }
 
@@ -111,7 +104,6 @@ class CashLog with EquatableMixin {
       observation: map['observation'],
       employeeName: map['employeeName'],
       date: DateTime.parse(map['date']),
-      isSynced: map['isSynced'] == 1,
     );
   }
 
@@ -125,7 +117,6 @@ class CashLog with EquatableMixin {
       'observation': observation,
       'employeeName': employeeName,
       'date': date.toIso8601String(),
-      'isSynced': isSynced,
     };
   }
 
@@ -138,11 +129,10 @@ class CashLog with EquatableMixin {
         observation,
         employeeName,
         date,
-        isSynced,
       ];
 
   @override
   String toString() {
-    return 'CashLog(id: $id, type: $type, amount: $amount, observation: $observation, employee: $employeeName, date: $date, synced: $isSynced)';
+    return 'CashLog(id: $id, type: $type, amount: $amount, observation: $observation, employee: $employeeName, date: $date)';
   }
 }

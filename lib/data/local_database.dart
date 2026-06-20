@@ -56,7 +56,6 @@ class DatabaseHelper {
         observation TEXT NULL,
         employeeName TEXT NOT NULL,
         date TEXT NOT NULL,
-        isSynced INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
@@ -68,11 +67,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Índice para busca de logs pendentes
-    await db.execute('''
-      CREATE INDEX idx_cash_logs_synced ON $_tableName (isSynced)
-    ''');
-
     // Índice para ordenação por data
     await db.execute('''
       CREATE INDEX idx_cash_logs_date ON $_tableName (date DESC)
@@ -80,9 +74,6 @@ class DatabaseHelper {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      // Versão 2: adiciona coluna isSynced (já na tabela original)
-    }
     if (oldVersion < 3) {
       // Versão 3: adiciona tabela de configuração
       await db.execute('''
@@ -172,28 +163,6 @@ class DatabaseHelper {
     return List.generate(maps.length, (i) => CashLog.fromMap(maps[i]));
   }
 
-  /// Leitura de logs pendentes de sincronização
-  Future<List<CashLog>> getPendingLogs() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      _tableName,
-      where: 'isSynced = 0',
-      orderBy: 'date ASC',
-    );
-    return List.generate(maps.length, (i) => CashLog.fromMap(maps[i]));
-  }
-
-  /// Atualiza o status de sincronização
-  Future<void> updateSyncStatus(String logId, bool isSynced) async {
-    final db = await database;
-    await db.update(
-      _tableName,
-      {'isSynced': isSynced ? 1 : 0},
-      where: 'id = ?',
-      whereArgs: [logId],
-    );
-  }
-
   Future<void> deleteAllLogs() async {
     final db = await database;
 
@@ -233,14 +202,6 @@ class DatabaseHelper {
     return CashLog.fromMap(maps[0]);
   }
 
-  /// Conta o total de logs pendentes
-  Future<int> countPendingLogs() async {
-    final db = await database;
-    return Sqflite.firstIntValue(
-      await db.rawQuery('SELECT COUNT(*) FROM $_tableName WHERE isSynced = 0'),
-    ) ?? 0;
-  }
-
   /// Salva o saldo inicial na tabela de configuração
   Future<void> saveInitialBalance(double balance) async {
     final db = await database;
@@ -269,14 +230,5 @@ class DatabaseHelper {
     await db.execute('DROP TABLE IF EXISTS $_tableName');
     await db.execute('DROP TABLE IF EXISTS $_configTableName');
     await _onCreate(db, 3);
-  }
-
-  /// Limpa logs sincronizados (para otimização)
-  Future<void> cleanSyncedLogs() async {
-    final db = await database;
-    await db.delete(
-      _tableName,
-      where: 'isSynced = 1',
-    );
   }
 }

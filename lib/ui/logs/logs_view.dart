@@ -142,13 +142,6 @@ class LogsView extends ConsumerWidget {
                       color: Colors.green,
                     ),
                   ),
-                const SizedBox(height: 4),
-                Text(
-                  log.isSynced ? 'Sincronizado' : 'Pendente',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: log.isSynced ? Colors.green : Colors.orange,
-                      ),
-                ),
               ],
             ),
             trailing: Text(

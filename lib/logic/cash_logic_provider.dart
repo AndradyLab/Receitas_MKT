@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/cash_log_model.dart';
 import '../data/local_database.dart';
@@ -53,11 +52,9 @@ class InitialBalanceNotifier extends AsyncNotifier<double?> {
 /// Estado para os logs de caixa
 class CashLogsState extends Equatable {
   final List<CashLog> logs;
-  final int pendingCount;
 
   const CashLogsState({
     this.logs = const [],
-    this.pendingCount = 0,
   });
 
   CashLogsState copyWith({
@@ -66,7 +63,6 @@ class CashLogsState extends Equatable {
   }) {
     return CashLogsState(
       logs: logs ?? this.logs,
-      pendingCount: pendingCount ?? this.pendingCount,
     );
   }
 
@@ -99,7 +95,7 @@ class CashLogsState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [logs, pendingCount];
+  List<Object?> get props => [logs];
 }
 
 final cashLogsProvider = AsyncNotifierProvider.family<CashLogsNotifier, CashLogsState, bool>(
@@ -119,8 +115,7 @@ class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
 
   Future<CashLogsState> _fetchState() async {
     final logs = await _database.getAllCashLogs();
-    final pendingCount = await _database.countPendingLogs();
-    return CashLogsState(logs: logs, pendingCount: pendingCount);
+    return CashLogsState(logs: logs);
   }
 
   Future<void> resetFullDBApplication() async {
@@ -139,8 +134,7 @@ class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
 
   Future<CashLogsState> _fetchRecentState() async {
     final logs = await _database.getRecentLogs();
-    final pendingCount = await _database.countPendingLogs();
-    return CashLogsState(logs: logs, pendingCount: pendingCount);
+    return CashLogsState(logs: logs);
   }
 
   /// Busca logs por nome do funcionário
