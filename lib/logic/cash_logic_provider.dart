@@ -3,26 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/cash_log_model.dart';
 import '../data/local_database.dart';
-import '../data/sheets_service.dart';
-import 'sync_controller.dart';
-
-// ==========================================
-// PROVIDERS DE SERVIÇOS BÁSICOS
-// ==========================================
-
-/// Provider para SheetsService (Singleton)
-final sheetsServiceProvider = Provider<SheetsService>((ref) {
-  return SheetsService();
-});
 
 final databaseProvider = Provider<DatabaseHelper>((ref) {
   throw UnimplementedError('O databaseProvider deve ser sobrescrito no main.dart');
-});
-
-final syncControllerProvider = Provider<SyncController>((ref) {
-  final database = ref.watch(databaseProvider);
-  final sheetsService = ref.watch(sheetsServiceProvider);
-  return SyncController(database, sheetsService);
 });
 
 // ==========================================
@@ -35,20 +18,9 @@ final initialBalanceProvider = AsyncNotifierProvider<InitialBalanceNotifier, dou
 
 class InitialBalanceNotifier extends AsyncNotifier<double?> {
   DatabaseHelper get _database => ref.read(databaseProvider);
-  SheetsService get _sheetsService => ref.read(sheetsServiceProvider);
 
   @override
   Future<double?> build() async {
-    try{
-      // Tenta carregar do Google Sheets primeiro
-      final sheetsBalance = await _sheetsService.loadInitialBalance();
-
-      if (sheetsBalance != null) {
-        return sheetsBalance;
-      }
-    }catch (_) {}
-
-
     // Fallback para cache local
     final cachedBalance = await _database.getCachedInitialBalance();
     if (cachedBalance != null) {
@@ -64,7 +36,6 @@ class InitialBalanceNotifier extends AsyncNotifier<double?> {
     state = const AsyncLoading();
 
     try {
-      await _sheetsService.saveInitialBalance(newBalance);
       await _database.saveInitialBalance(newBalance);
 
       // Atualiza o estado
@@ -139,8 +110,6 @@ final cashLogsProvider = AsyncNotifierProvider.family<CashLogsNotifier, CashLogs
 
 class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
   DatabaseHelper get _database => ref.read(databaseProvider);
-  SheetsService get _sheetsService => ref.read(sheetsServiceProvider);
-  SyncController get _syncController => ref.read(syncControllerProvider);
 
   @override
   Future<CashLogsState> build(bool isRecent) async {
@@ -169,19 +138,6 @@ class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
       state = AsyncValue.error(e, stack);
     }
   }
-
-  Future<void> resetCredentials() async {
-    state = const AsyncLoading();
-
-    try {
-      await _sheetsService.clearCredentials();
-
-    } catch (e, _) {
-      throw Exception('Erro ao apagar credenciais: $e');
-    }
-  }
-
-
 
   Future<CashLogsState> _fetchRecentState() async {
     final logs = await _database.getRecentLogs();
@@ -219,7 +175,6 @@ class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
 
     try {
       await _database.insertCashLog(log);
-      await _syncController.queueForSync(log);
 
       state = AsyncValue.data(await _fetchState());
       ref.invalidate(cashLogsProvider(true));
@@ -234,7 +189,6 @@ class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
 
     try {
       await _database.insertCashLog(log);
-      await _syncController.queueForSync(log);
       state = AsyncValue.data(await _fetchState());
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
