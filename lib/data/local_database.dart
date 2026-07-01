@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'cash_log_model.dart';
@@ -55,7 +54,7 @@ class DatabaseHelper {
         amount REAL NOT NULL,
         observation TEXT NULL,
         employeeName TEXT NOT NULL,
-        date TEXT NOT NULL
+        date TEXT NOT NULL,
       )
     ''');
 
