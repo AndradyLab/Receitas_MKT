@@ -33,7 +33,7 @@ class DatabaseHelper {
       databaseFactory = databaseFactoryFfi;
     }
 
-    final documentsDir = await getApplicationDocumentsDirectory();
+    final documentsDir = await getApplicationSupportDirectory();
     final dbPath = join(documentsDir.path, 'receitas_mkt.db');
 
     final database = await openDatabase(
@@ -55,7 +55,7 @@ class DatabaseHelper {
         amount REAL NOT NULL,
         observation TEXT NULL,
         employeeName TEXT NOT NULL,
-        date TEXT NOT NULL,
+        date TEXT NOT NULL
       )
     ''');
 

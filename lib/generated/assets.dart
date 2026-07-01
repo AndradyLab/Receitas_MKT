@@ -12,8 +12,6 @@ class Assets {
 class $AssetsImagesGen {
   const $AssetsImagesGen();
 
-  final String fORM821UtilizacaoDoCaixaFixo0904 =
-      'assets/images/FORM 82-1 - Utilização do Caixa Fixo - 09.04.xlsx';
   final SvgGenImage logoVianaMoura =
       const SvgGenImage('assets/images/logo-viana-moura.svg');
 }
