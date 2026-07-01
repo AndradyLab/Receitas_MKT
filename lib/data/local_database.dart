@@ -54,7 +54,7 @@ class DatabaseHelper {
         amount REAL NOT NULL,
         observation TEXT NULL,
         employeeName TEXT NOT NULL,
-        date TEXT NOT NULL,
+        date TEXT NOT NULL
       )
     ''');
 
