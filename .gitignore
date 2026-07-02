@@ -1,8 +1,13 @@
+# ==============================
 # Miscellaneous
+# ==============================
 *.class
 *.log
 *.pyc
 *.swp
+*.bak
+*.tmp
+*.orig
 .DS_Store
 .atom/
 .build/
@@ -12,26 +17,40 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# ==============================
+# IDEs / Editors
+# ==============================
+# IntelliJ / Android Studio
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# VS Code (mantenha comentado se quiser versionar launch.json/tasks.json)
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
-# Flutter/Dart/Pub related
+# ==============================
+# Flutter / Dart / Pub
+# ==============================
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
 /coverage/
+*.g.dart.bak
+
+# Arquivos gerados automaticamente (regeram a cada pub get / build)
+**/generated_plugin_registrant.*
+**/GeneratedPluginRegistrant.*
+**/generated_plugins.cmake
 
 # Symbolication related
 app.*.symbols
@@ -39,7 +58,136 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Flutter version management
+.fvm/
+.fvmrc
+
+# Freezed / json_serializable (descomente se usar geração de código e não quiser versionar)
+# *.freezed.dart
+# *.g.dart
+
+# ==============================
+# Android
+# ==============================
+**/android/**/gradle-wrapper.jar
+**/android/.gradle
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/key.properties
+**/android/app/*.jks
+**/android/app/*.keystore
+
 /android/app/debug
 /android/app/profile
 /android/app/release
+android/.idea/
+
+# ==============================
+# iOS / macOS
+# ==============================
+**/ios/**/*.mode1v3
+**/ios/**/*.mode2v3
+**/ios/**/*.moved-aside
+**/ios/**/*.pbxuser
+**/ios/**/*.perspectivev3
+**/ios/**/*sync/
+**/ios/**/.sconsign.dblite
+**/ios/**/.tags*
+**/ios/**/.vagrant/
+**/ios/**/DerivedData/
+**/ios/**/Icon?
+**/ios/**/Pods/
+**/ios/**/.symlinks/
+**/ios/**/profile
+**/ios/**/xcuserdata
+**/ios/.generated/
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/macos/Flutter/ephemeral/
+**/macos/Pods/
+
+# Xcode
+**/*.xcodeproj/*
+!**/*.xcodeproj/project.pbxproj
+!**/*.xcodeproj/xcshareddata/
+!**/*.xcworkspace/contents.xcworkspacedata
+**/*.xcworkspace/xcuserdata/
+
+# CocoaPods
+**/ios/Podfile.lock
+**/macos/Podfile.lock
+
+# ==============================
+# Windows
+# ==============================
+windows/flutter/ephemeral/
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugin_registrant.h
+windows/flutter/generated_plugins.cmake
+windows/x64/
+windows/x86/
+*.exe
+*.pdb
+*.ilk
+*.obj
+*.exp
+*.lib
+
+# ==============================
+# Linux
+# ==============================
+linux/flutter/ephemeral/
+linux/flutter/generated_plugin_registrant.cc
+linux/flutter/generated_plugin_registrant.h
+linux/flutter/generated_plugins.cmake
+
+# ==============================
+# Web
+# ==============================
+/web/flutter_service_worker.js
+/web/version.json
+
+# ==============================
+# Firebase (se usar)
+# ==============================
+**/google-services.json
+**/GoogleService-Info.plist
+firebase_options.dart
+.firebase/
+.firebaserc
+
+# ==============================
+# Environment / Secrets
+# ==============================
+.env
+.env.*
+*.pem
+*.p12
+*.key
+secrets.dart
+lib/secrets/
+
+# ==============================
+# Testing / Coverage
+# ==============================
+coverage/
+test/coverage_helper_test.dart
+
+# ==============================
+# Node (caso use scripts JS/CI)
+# ==============================
+node_modules/
