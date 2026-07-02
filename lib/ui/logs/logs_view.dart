@@ -310,7 +310,7 @@ class LogsView extends ConsumerWidget {
           if (log.photoPath != null)
             TextButton(
               onPressed: () => showPhoto(context, log.photoPath!),
-              child: const Text('Ver Foto'),
+              child: const Text('Ver Nota'),
             ),
           TextButton(
             onPressed: () => Navigator.pop(context),
