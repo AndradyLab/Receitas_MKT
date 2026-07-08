@@ -57,7 +57,7 @@ class PdfService {
 
     final Uint8List bytes = await Isolate.run(() => _buildPdfBytes(params));
 
-    final String fileName = "Relatorio_Caixa_${DateTime.now().toString()}.pdf";
+    final String fileName = "Relatorio_Caixa_${DateTime.now().toString()}.pdf".replaceAll(".", "_");
 
     if (Platform.isWindows || Platform.isLinux) {
       return _saveOnDesktop(bytes, fileName);
