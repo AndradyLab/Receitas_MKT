@@ -356,7 +356,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                       child: InkWell(
                         onTap: () async {
                           await _selectDate(isStart: true);
-                          setDialogState(() {});
+                          setDialogState(() => excelErrorMessage = null);
                         },
                         child: IgnorePointer(
                           child: TextField(
@@ -375,7 +375,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                       child: InkWell(
                         onTap: () async {
                           await _selectDate(isStart: false);
-                          setDialogState(() {});
+                          setDialogState(() => excelErrorMessage = null);
                         },
                         child: IgnorePointer(
                           child: TextField(
