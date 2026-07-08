@@ -43,7 +43,7 @@ flutter:
 msix_config:
   display_name: Receitas Marketing
   publisher_display_name: AndradyLabs
-  identity_name: com.andradylabs.receitas_mkt
+  identity_name: com.andradylabs.receitasmkt
   msix_version: 1.0.0.0
   logo_path: windows\runner\resources\app_icon.ico
   capabilities: internetClient, picturesLibrary, documentsLibrary
