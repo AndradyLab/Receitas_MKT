@@ -458,7 +458,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : const Text('Exportar'),
+                    : const Text('Copiar'),
               ),
             ],
           ),
