@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:intl/date_symbol_data_local.dart';
@@ -38,6 +39,16 @@ class ReceitasMktApp extends StatelessWidget {
       theme: _buildTheme(true),
       darkTheme: _buildTheme(false),
       routerConfig: router,
+
+      supportedLocales: const [
+        Locale('pt', 'BR'), 
+        Locale('en', 'US'),
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
     );
   }
 
