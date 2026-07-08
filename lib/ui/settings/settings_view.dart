@@ -313,8 +313,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                       final messages = {
                         PdfExportStatus
                             .empty: 'Não há lançamentos nesse período.',
-                        PdfExportStatus.error: 'Erro ao gerar PDF: ${result
-                            .message}',
+                        PdfExportStatus.error: 'Erro ao gerar PDF.',
                         PdfExportStatus.success: 'PDF exportado com sucesso!',
                       };
 
@@ -444,7 +443,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
 
                         final messages = {
                           ExcelExportStatus.empty: 'Não há lançamentos nesse período.',
-                          ExcelExportStatus.error: 'Erro ao exportar: ${result.message}',
+                          ExcelExportStatus.error: 'Erro ao exportar.',
                           ExcelExportStatus.success: 'Copiado! Cole no Excel com Ctrl+V.',
                         };
 
