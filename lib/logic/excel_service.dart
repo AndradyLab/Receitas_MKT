@@ -31,14 +31,14 @@ class ExcelService {
 
         final amount = log.amount.toStringAsFixed(2).replaceAll('.', ',');
 
-        final description = (log.description ?? '')
+        final observation = (log.observation ?? '')
             .toString()
             .replaceAll('\t', ' ')
             .replaceAll('\n', ' ')
             .replaceAll('\r', ' ')
             .trim();
 
-        buffer.write("$date\t$mktString\t\t$amount\t$description\n");
+        buffer.write("$date\t$mktString\t\t$amount\t$observation\n");
       }
 
       await Clipboard.setData(ClipboardData(text: buffer.toString()));
