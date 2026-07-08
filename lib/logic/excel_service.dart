@@ -28,9 +28,8 @@ class ExcelService {
         final date = DateFormat('dd/MM/yyyy').format(log.date);
 
         const mktString = "MKT";
-
-        final amount = log.amount.toStringAsFixed(2).replaceAll('.', ',');
-
+        final formatter = NumberFormat.currency(locale: 'pt_BR', symbol: '');
+        final amount = formatter.format(log.amount).trim();  
         final observation = (log.observation ?? '')
             .toString()
             .replaceAll('\t', ' ')
@@ -38,7 +37,7 @@ class ExcelService {
             .replaceAll('\r', ' ')
             .trim();
 
-        buffer.write("$date\t$mktString\t\t$amount\t$observation\n");
+        buffer.write("\t$date\t$mktString\t\t\t\t\t\t$amount\t\t\t$observation\n");
       }
 
       await Clipboard.setData(ClipboardData(text: buffer.toString()));
