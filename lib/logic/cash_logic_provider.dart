@@ -45,11 +45,6 @@ class InitialBalanceNotifier extends AsyncNotifier<double?> {
   }
 }
 
-// ==========================================
-// CASH LOGS (Novo Padrão)
-// ==========================================
-
-/// Estado para os logs de caixa
 class CashLogsState extends Equatable {
   final List<CashLog> logs;
 
@@ -66,7 +61,6 @@ class CashLogsState extends Equatable {
     );
   }
 
-  /// Calcula o saldo atual baseado nos logs
   double get currentBalance {
     double ingress = 0;
     double egress = 0;

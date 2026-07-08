@@ -4,11 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:receitas_mkt/data/cash_log_model.dart';
-import 'package:receitas_mkt/ui/home/home_view.dart';
-import 'package:receitas_mkt/ui/logs/logs_view.dart';
-import 'package:receitas_mkt/ui/settings/settings_view.dart';
 
-/// BADGE reutilizável para indicar o tipo de transação (Receita/Despesa)
 class CashTypeBadge extends StatelessWidget {
   final CashType type;
 
@@ -70,7 +66,6 @@ class SyncStatusBadge extends StatelessWidget {
   }
 }
 
-/// Card com borda arredondada e sombra leve para使用 em listas
 class CardList extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;

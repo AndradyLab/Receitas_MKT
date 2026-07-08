@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
 import 'package:uuid/uuid.dart';
-import 'dart:convert';
 
 enum CashType { ingress, egress }
 
