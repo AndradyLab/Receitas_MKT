@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:receitas_mkt/logic/pdf_service.dart';
+import 'package:receitas_mkt/logic/excel_service.dart';
 import 'package:receitas_mkt/ui/widgets/shared_widgets.dart';
 
 import 'package:receitas_mkt/logic/cash_logic_provider.dart';
@@ -21,6 +22,8 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
   DateTime? _endDate;
   bool _isGeneratingPdf = false;
   String? pdfErrorMessage;
+  bool _isGeneratingExcel = false;
+  String? excelErrorMessage;
 
   @override
   void initState() {
@@ -129,6 +132,13 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
             subtitle: const Text('Gerar arquivo PDF das transações.'),
             leading: const Icon(Icons.file_download),
             onTap: () => _showPDFGenerate(context, ref),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            title: const Text('Exportar para Excel'),
+            subtitle: const Text('Copiar transações para colar em uma planilha.'),
+            leading: const Icon(Icons.table_chart_outlined),
+            onTap: () => _showExcelExport(context, ref),
           ),
         ],
       ),
@@ -325,6 +335,133 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                   ),
                 ],
               ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showExcelExport(BuildContext context, WidgetRef ref) async {
+    return showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            title: const Text('Exportar para Excel'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          await _selectDate(isStart: true);
+                          setDialogState(() {});
+                        },
+                        child: IgnorePointer(
+                          child: TextField(
+                            controller: _initialDateController,
+                            decoration: const InputDecoration(
+                              labelText: 'Início',
+                              border: OutlineInputBorder(),
+                              suffixIcon: Icon(Icons.calendar_today),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          await _selectDate(isStart: false);
+                          setDialogState(() {});
+                        },
+                        child: IgnorePointer(
+                          child: TextField(
+                            controller: _finalDateController,
+                            decoration: const InputDecoration(
+                              labelText: 'Fim',
+                              border: OutlineInputBorder(),
+                              suffixIcon: Icon(Icons.calendar_today),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (excelErrorMessage != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    excelErrorMessage!,
+                    style: const TextStyle(color: Colors.red, fontSize: 13),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: _isGeneratingExcel ? null : () => Navigator.pop(dialogContext),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: _isGeneratingExcel
+                    ? null
+                    : () async {
+                        if (_startDate == null || _endDate == null) {
+                          setDialogState(() {
+                            excelErrorMessage = 'Selecione as duas datas.';
+                          });
+                          return;
+                        }
+
+                        setDialogState(() => _isGeneratingExcel = true);
+                        setState(() {});
+
+                        final cashState = ref.read(cashLogsProvider(false)).value;
+
+                        if (cashState == null) {
+                          setDialogState(() => _isGeneratingExcel = false);
+                          setState(() {});
+                          if (!mounted) return;
+                          setDialogState(() {
+                            excelErrorMessage = 'Dados ainda carregando, tente novamente.';
+                          });
+                          return;
+                        }
+
+                        final logsInRange = cashState.getByDateRange(_startDate!, _endDate!);
+
+                        final excelService = ref.read(excelServiceProvider);
+                        final result = await excelService.exportToClipboard(logsInRange);
+
+                        setDialogState(() => _isGeneratingExcel = false);
+                        setState(() {});
+
+                        if (!mounted) return;
+                        Navigator.pop(dialogContext);
+
+                        final messages = {
+                          ExcelExportStatus.empty: 'Não há lançamentos nesse período.',
+                          ExcelExportStatus.error: 'Erro ao exportar: ${result.message}',
+                          ExcelExportStatus.success: 'Copiado! Cole no Excel com Ctrl+V.',
+                        };
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(messages[result.status]!)),
+                        );
+                      },
+                child: _isGeneratingExcel
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Exportar'),
+              ),
+            ],
+          ),
         );
       },
     );
