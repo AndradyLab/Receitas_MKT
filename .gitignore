@@ -191,3 +191,5 @@ test/coverage_helper_test.dart
 # Node (caso use scripts JS/CI)
 # ==============================
 node_modules/
+
+certs/
