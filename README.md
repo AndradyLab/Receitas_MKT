@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# Recitas_MKT
-=======
 # 💰 Receitas Marketing
 
 Aplicativo de controle financeiro desenvolvido para ajudar empresas a gerenciar seus custos fixos e receitas monetárias de forma simples, ágil e organizada — com foco especial em times e áreas de marketing.
@@ -108,4 +105,3 @@ Ficou com alguma dúvida ou encontrou um problema? Entre em contato:
 ## 📝 Sobre este projeto
 
 Este projeto foca em cobrir o fluxo essencial de controle financeiro manual para uma equipe de marketing.
->>>>>>> develop
