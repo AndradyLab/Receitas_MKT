@@ -1,0 +1,148 @@
+name: Release
+
+# Only triggers when a tag matching vX.Y.Z is pushed.
+# A plain push to main does NOT trigger anything.
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: stable
+
+      - run: flutter pub get
+
+      - run: flutter build apk --release
+
+      - name: Rename APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/receitas_mkt.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/receitas_mkt.apk
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: stable
+
+      - run: flutter pub get
+
+      - run: flutter build windows --release
+
+      - name: Restore signing certificate
+        shell: bash
+        run: |
+          mkdir -p certs
+          echo "${{ secrets.MSIX_CERTIFICATE_BASE64 }}" | base64 --decode > certs/receitas_mkt.pfx
+      - name: Build MSIX
+        run: >
+          flutter pub run msix:create
+          --certificate-path=certs/receitas_mkt.pfx
+          --certificate-password="${{ secrets.MSIX_CERTIFICATE_PASSWORD }}"
+          --install-certificate=false
+
+      - name: Remove certificate from runner
+        if: always()
+        shell: bash
+        run: rm -f certs/receitas_mkt.pfx
+
+      - name: Locate and rename MSIX
+        shell: bash
+        run: |
+          MSIX_PATH=$(find build -name "*.msix" | head -n 1)
+          cp "$MSIX_PATH" build/receitas_mkt.msix
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-msix
+          path: build/receitas_mkt.msix
+
+  build-appinstaller:
+    needs: build-windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag (strips leading "v")
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Fill appinstaller template
+        run: |
+          sed "s/{{VERSION}}/${{ steps.version.outputs.version }}/g" \
+            deploy/appinstaller/receitas_mkt.appinstaller.template \
+            > receitas_mkt.appinstaller
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appinstaller
+          path: receitas_mkt.appinstaller
+
+  release:
+    needs: [build-android, build-windows, build-appinstaller]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # required to read the annotated tag message
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-msix
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: appinstaller
+          path: dist
+
+      - name: Copy certificate installer to release assets
+        run: cp deploy/cert/instalador.ps1 dist/instalador.ps1
+
+      - name: Extract annotated tag message
+        id: tagmsg
+        run: |
+          MSG=$(git tag -l --format='%(contents)' "${GITHUB_REF_NAME}")
+          {
+            echo "msg<<EOF_TAGMSG"
+            echo "$MSG"
+            echo "EOF_TAGMSG"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Assemble release body from template
+        env:
+          TAG_MESSAGE: ${{ steps.tagmsg.outputs.msg }}
+        run: envsubst '$TAG_MESSAGE' < deploy/release/release_template.md > release_body.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body_path: release_body.md
+          files: |
+            dist/receitas_mkt.apk
+            dist/receitas_mkt.msix
+            dist/receitas_mkt.appinstaller
+            dist/instalador.ps1

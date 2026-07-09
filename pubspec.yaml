@@ -50,4 +50,3 @@ msix_config:
   logo_path: windows\runner\resources\app_icon.ico
   capabilities: internetClient, picturesLibrary, documentsLibrary
   publisher: CN=AndradyLabs
-  certificate_path: certs\receitas_mkt.pfx
