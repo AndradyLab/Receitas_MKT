@@ -93,6 +93,40 @@ flutter pub run msix:create --certificate-password=SUA_SENHA_AQUI
 
 ---
 
+## 🏷️ Publicando uma nova versão (tags)
+
+O build e a publicação das releases (Android + Windows) são feitos automaticamente pelo CI/CD sempre que uma tag no padrão `vX.Y.Z` é enviada ao repositório. Um push comum na `main` **não** dispara nada — só a tag.
+
+### Criar uma nova versão
+
+```bash
+git tag -a v1.2.0 -m "Nova Função: descrição da novidade desta versão"
+git push origin v1.2.0
+```
+
+> A mensagem do `-m` vira automaticamente o corpo da descrição da Release no GitHub — capriche nela.
+
+Isso dispara o workflow, que builda o `.apk`, o `.msix`, gera o `.appinstaller` e publica tudo como uma nova [Release](https://github.com/AndradyLab/Receitas_MKT/releases).
+
+### Remover uma tag (ex: tag de teste ou criada por engano)
+
+```bash
+# remove localmente
+git tag -d v1.2.0
+
+# remove do repositório remoto
+git push origin :refs/tags/v1.2.0
+```
+
+> Remover a tag **não** apaga a Release já publicada no GitHub — se o CI/CD já rodou e criou a Release, apague-a manualmente em [Releases](https://github.com/AndradyLab/Receitas_MKT/releases) → **Delete**.
+
+### Padrão de versionamento
+
+Siga [Semantic Versioning](https://semver.org/lang/pt-BR/) (`MAJOR.MINOR.PATCH`):
+- **MAJOR** — mudanças que quebram compatibilidade
+- **MINOR** — novas funcionalidades
+- **PATCH** — correções de bugs
+
 ## 📬 Suporte
 
 Ficou com alguma dúvida ou encontrou um problema? Entre em contato:
