@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AppInstaller
-  Uri="https://github.com/ViniciusAndradeX/receitas_mkt/releases/latest/download/receitas_mkt.appinstaller"
+  Uri="https://github.com/AndradyLab/receitas_mkt/releases/latest/download/receitas_mkt.appinstaller"
   Version="{{VERSION}}.0"
   xmlns="http://schemas.microsoft.com/appx/appinstaller/2018">
 
@@ -9,7 +9,7 @@
     Publisher="CN=AndradyLabs"
     Version="{{VERSION}}.0"
     ProcessorArchitecture="x64"
-    Uri="https://github.com/ViniciusAndradeX/receitas_mkt/releases/latest/download/receitas_mkt.msix" />
+    Uri="https://github.com/AndradyLab/receitas_mkt/releases/latest/download/receitas_mkt.msix" />
 
   <UpdateSettings>
     <OnLaunch HoursBetweenUpdateChecks="0" ShowPrompt="false" />
