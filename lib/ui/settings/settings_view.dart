@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:receitas_mkt/logic/pdf_service.dart';
 import 'package:receitas_mkt/logic/excel_service.dart';
+import 'package:receitas_mkt/logic/update_android_service.dart';
 import 'package:receitas_mkt/ui/widgets/shared_widgets.dart';
+import 'package:receitas_mkt/ui/widgets/update_widget.dart';
 
 import 'package:receitas_mkt/logic/cash_logic_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -24,6 +26,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
   String? pdfErrorMessage;
   bool _isGeneratingExcel = false;
   String? excelErrorMessage;
+  bool _checkingUpdate = false;
 
   @override
   void initState() {
@@ -54,6 +57,9 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
           _buildSectionTitle(context, 'Exportação'),
           _buildPDFSystem(context, ref),
           const SizedBox(height: 24),
+          _buildSectionTitle(context, 'Atualizações'),
+          _buildUpdateSection(context),
+          const SizedBox(height: 24), 
           _buildSectionTitle(context, 'Sobre'),
           _buildAboutSection(context),
         ],
@@ -551,4 +557,47 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
       );
     }
   }
+  Widget _buildUpdateSection(BuildContext context) {
+  return Card(
+    child: ListTile(
+      leading: _checkingUpdate
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.system_update),
+      title: const Text('Verificar atualizações'),
+      subtitle: const Text('Checar se há uma nova versão disponível'),
+      onTap: _checkingUpdate ? null : _checkForUpdateManually,
+    ),
+  );
 }
+
+Future<void> _checkForUpdateManually() async {
+  setState(() => _checkingUpdate = true);
+
+  try {
+    final update = await UpdateService().checkForUpdate();
+
+    if (!mounted) return;
+
+    if (update != null) {
+      showUpdateToast(context, update);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Você já está na versão mais recente.')),
+      );
+    }
+  } catch (_) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível verificar atualizações.')),
+      );
+    }
+  } finally {
+    if (mounted) setState(() => _checkingUpdate = false);
+  }
+}
+}
+
