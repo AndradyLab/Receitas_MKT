@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:receitas_mkt/logic/update_android_service.dart';
+import 'package:receitas_mkt/ui/widgets/update_widget.dart';
+import 'dart:io' show Platform;
 
 import '../../data/cash_log_model.dart';
 import '../../logic/cash_logic_provider.dart';
@@ -19,6 +22,7 @@ class _HomeViewState extends ConsumerState<HomeView>
     with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   late final DateFormat _dateFormatter;
   late final NumberFormat _currencyFormatter;
+  static bool _hasCheckedUpdateThisSession = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -32,9 +36,23 @@ class _HomeViewState extends ConsumerState<HomeView>
       symbol: 'R\$',
       decimalDigits: 2,
     );
-
     WidgetsBinding.instance.addObserver(this);
+    if (Platform.isAndroid) {
+      _hasCheckedUpdateThisSession = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _checkForUpdate());
+    }
   }
+
+  Future<void> _checkForUpdate() async {
+  try {
+    final update = await UpdateService().checkForUpdate();
+    if (update != null && mounted) {
+      showUpdateToast(context, update);
+    }
+  } catch (e) {
+    debugPrint('Verificação de atualização falhou: $e');
+  }
+}
 
   @override
   void dispose() {
