@@ -1,7 +1,7 @@
 name: receitas_mkt
 description: Aplicativo de gerenciamento de fluxo de caixa para marketing.
 publish_to: "none"
-version: 1.1.3+4
+version: 1.2.0+5
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -27,6 +27,11 @@ dependencies:
   share_plus: ^12.0.2
   file_picker: ^10.0.0
   msix: ^3.18.0
+  flutter_launcher_icons: ^0.14.4
+  dio: ^5.10.0
+  package_info_plus: ^9.0.1
+  permission_handler: ^12.0.3
+  open_filex: ^4.7.0
 
 dev_dependencies:
   flutter_test:
@@ -42,11 +47,19 @@ flutter:
     - assets/images/
     - assets/icons/
 
+flutter_launcher_icons:
+  android: true
+  image_path: "assets/icons/app_icon.jpg"
+  windows:
+    generate: true
+    image_path: "assets/icons/app_icon.jpg"
+    icon_size: 256
+    
 msix_config:
   display_name: Receitas Marketing
   publisher_display_name: AndradyLabs
   identity_name: com.andradylabs.receitasmkt
-  msix_version: 1.1.3.0
+  msix_version: 1.2.0.0
   logo_path: windows\runner\resources\app_icon.ico
   capabilities: internetClient, picturesLibrary, documentsLibrary
   publisher: CN=AndradyLabs
