@@ -65,7 +65,7 @@ class _HomeViewState extends ConsumerState<HomeView>
     super.build(context);
 
     final initialBalanceAsync = ref.watch(initialBalanceProvider);
-    final cashLogsAsync = ref.watch(cashLogsProvider(true));
+    final cashLogsAsync = ref.watch(cashLogsProvider);
 
     return initialBalanceAsync.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -102,7 +102,7 @@ class _HomeViewState extends ConsumerState<HomeView>
           const SizedBox(height: 24),
           _buildButtons(),
           const SizedBox(height: 24),
-          _buildRecentTransactions(cashLogsState.logs),
+          _buildRecentTransactions(cashLogsState.logs.length > 5 ? cashLogsState.logs.sublist(0, 5) : cashLogsState.logs),
         ],
       ),
     );

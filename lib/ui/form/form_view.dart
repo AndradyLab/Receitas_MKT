@@ -277,7 +277,7 @@ class _FormViewState extends ConsumerState<FormView> {
         date: _selectedDate,
       );
 
-      await ref.read(cashLogsProvider(false).notifier).addLog(log);
+      await ref.read(cashLogsProvider.notifier).addLog(log);
 
       if (!mounted) return;
 
