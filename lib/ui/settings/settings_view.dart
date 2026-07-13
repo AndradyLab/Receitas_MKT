@@ -110,7 +110,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
           ),
           ElevatedButton(
             onPressed: () async {
-              await ref.read(cashLogsProvider(false).notifier).resetFullDBApplication();
+              await ref.read(cashLogsProvider.notifier).resetFullDBApplication();
 
               if (mounted) {
                 Navigator.pop(context);
@@ -279,7 +279,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                       setState(() {});
 
                       final cashState = ref
-                          .read(cashLogsProvider(false))
+                          .read(cashLogsProvider)
                           .value;
 
                       if (cashState == null) {
@@ -424,7 +424,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                         setDialogState(() => _isGeneratingExcel = true);
                         setState(() {});
 
-                        final cashState = ref.read(cashLogsProvider(false)).value;
+                        final cashState = ref.read(cashLogsProvider).value;
 
                         if (cashState == null) {
                           setDialogState(() => _isGeneratingExcel = false);
