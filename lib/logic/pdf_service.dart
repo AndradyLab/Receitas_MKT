@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:receitas_mkt/logic/cash_logic_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -27,25 +28,36 @@ class _PdfBuildParams {
   final double currentBalance;
   final DateTime startDate;
   final DateTime endDate;
+  final double ingressTotal;
+  final double egressTotal;
 
   _PdfBuildParams({
     required this.logs,
     required this.currentBalance,
     required this.startDate,
     required this.endDate,
+    required this.ingressTotal,
+    required this.egressTotal,
   });
 }
 
 class PdfService {
+  double calculateExpenses(List<CashLog> logs) {
+    return logs.fold<double>(0, (sum, l) => sum + l.amount);
+  }
+
   Future<PdfExportResult> generateAndSharePDF({
     required List<CashLog> logs,
     required double currentBalance,
     required DateTime startDate,
     required DateTime endDate,
+    required CashLogsState cashLogsState,
   }) async {
     if (logs.isEmpty) {
       return const PdfExportResult(PdfExportStatus.empty);
     }
+    final ingressTotal = calculateExpenses(cashLogsState.ingressLogs);
+    final egressTotal = calculateExpenses(cashLogsState.egressLogs);
 
     try {
       final params = _PdfBuildParams(
@@ -53,6 +65,8 @@ class PdfService {
         currentBalance: currentBalance,
         startDate: startDate,
         endDate: endDate,
+        ingressTotal: ingressTotal,
+        egressTotal: egressTotal,
       );
 
     final Uint8List bytes = await Isolate.run(() => _buildPdfBytes(params));
@@ -113,9 +127,13 @@ Future<Uint8List> _buildPdfBytes(_PdfBuildParams params) async {
   final List<pw.TableRow> tableRows = [];
   final List<_PhotoEntry> photoEntries = [];
 
+  // 🎨 CABEÇALHO DA TABELA CLEAN: Fundo suave e apenas borda inferior
   tableRows.add(
     pw.TableRow(
-      decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+      decoration: const pw.BoxDecoration(
+        color: PdfColors.grey100,
+        border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey400, width: 1.5)),
+      ),
       children: [
         _buildHeaderCell('Data'),
         _buildHeaderCell('Tipo'),
@@ -131,7 +149,7 @@ Future<Uint8List> _buildPdfBytes(_PdfBuildParams params) async {
     final log = params.logs[i];
     final anchorName = 'foto_$i';
 
-    pw.Widget photoCell = pw.Text('-', textAlign: pw.TextAlign.center);
+    pw.Widget photoCell = pw.Text('-', textAlign: pw.TextAlign.center, style: const pw.TextStyle(color: PdfColors.grey500));
 
     if (log.photoPath != null && log.photoPath!.isNotEmpty) {
       final file = File(log.photoPath!);
@@ -151,8 +169,8 @@ Future<Uint8List> _buildPdfBytes(_PdfBuildParams params) async {
           child: pw.Text(
             'Ver Nota',
             style: const pw.TextStyle(
-              fontSize: 9,
-              color: PdfColors.blue,
+              fontSize: 10,
+              color: PdfColors.blue700,
               decoration: pw.TextDecoration.underline,
             ),
             textAlign: pw.TextAlign.center,
@@ -171,7 +189,7 @@ Future<Uint8List> _buildPdfBytes(_PdfBuildParams params) async {
           _buildDataCell(log.observation ?? ''),
           _buildDataCell('R\$ ${log.amount.toStringAsFixed(2)}'),
           pw.Padding(
-            padding: const pw.EdgeInsets.all(4),
+            padding: const pw.EdgeInsets.all(6),
             child: pw.Center(child: photoCell),
           ),
         ],
@@ -182,34 +200,87 @@ Future<Uint8List> _buildPdfBytes(_PdfBuildParams params) async {
   pdf.addPage(
     pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(32),
+      margin: const pw.EdgeInsets.all(40), // Um pouco mais de margem para respirar
       build: (pw.Context context) {
         return [
+          // 🎨 TÍTULO CLEAN: Agrupado com o período e sem linha de Header
           pw.Header(
             level: 0,
-            child: pw.Text('Relatorio de fluxo de caixa',
-                style:
-                pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+            decoration: const pw.BoxDecoration(border: pw.Border()), // Remove borda padrão
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'Relatorio de fluxo de caixa',
+                  style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey800),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  'Periodo: ${DateFormat('dd/MM/yyyy').format(params.startDate)} ate ${DateFormat('dd/MM/yyyy').format(params.endDate)}',
+                  style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
+                ),
+              ],
+            ),
           ),
-          pw.Text(
-              'Periodo: ${DateFormat('dd/MM/yyyy').format(params.startDate)} ate ${DateFormat('dd/MM/yyyy').format(params.endDate)}'),
-          pw.SizedBox(height: 10),
+          pw.SizedBox(height: 24),
+
+          // 🎨 CAIXA DE RESUMO: Estilo Dashboard moderno
           pw.Container(
-            padding: const pw.EdgeInsets.all(10),
+            padding: const pw.EdgeInsets.symmetric(vertical: 14, horizontal: 20),
             decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColors.grey),
+              color: PdfColors.grey50,
+              border: pw.Border.all(color: PdfColors.grey300),
               borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
             ),
-            child: pw.Center(
-              child: pw.Text(
-                'Saldo em caixa: R\$ ${params.currentBalance.toStringAsFixed(2)}',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14),
-              ),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('Entradas', style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 10)),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      'R\$ ${params.ingressTotal.toStringAsFixed(2)}',
+                      style: pw.TextStyle(color: PdfColors.green700, fontWeight: pw.FontWeight.bold, fontSize: 14),
+                    ),
+                  ],
+                ),
+                pw.Container(height: 24, width: 1, color: PdfColors.grey300), // Divisor
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('Saidas', style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 10)),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      'R\$ ${params.egressTotal.toStringAsFixed(2)}',
+                      style: pw.TextStyle(color: PdfColors.red700, fontWeight: pw.FontWeight.bold, fontSize: 14),
+                    ),
+                  ],
+                ),
+                pw.Container(height: 24, width: 1, color: PdfColors.grey300), // Divisor
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text('Saldo em caixa', style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 10)),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      'R\$ ${params.currentBalance.toStringAsFixed(2)}',
+                      style: pw.TextStyle(color: PdfColors.blueGrey800, fontWeight: pw.FontWeight.bold, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          pw.SizedBox(height: 20),
+          pw.SizedBox(height: 24),
+
+          // 🎨 TABELA CLEAN: Sem grid vertical, apenas linhas horizontais sutis
           pw.Table(
-            border: pw.TableBorder.all(color: PdfColors.grey400),
+            border: const pw.TableBorder(
+              horizontalInside: pw.BorderSide(color: PdfColors.grey200, width: 1),
+              bottom: pw.BorderSide(color: PdfColors.grey400, width: 1),
+            ),
             columnWidths: {
               0: const pw.FlexColumnWidth(1.5),
               1: const pw.FlexColumnWidth(1.5),
@@ -217,36 +288,47 @@ Future<Uint8List> _buildPdfBytes(_PdfBuildParams params) async {
               3: const pw.FlexColumnWidth(2.5),
               4: const pw.FlexColumnWidth(1.5),
               5: const pw.FlexColumnWidth(1.5),
-              6: const pw.FlexColumnWidth(1.5),
             },
             children: tableRows,
           ),
+
+          // 🎨 SESSÃO DE FOTOS CLEAN
           if (photoEntries.isNotEmpty) ...[
-          pw.NewPage(),
+            pw.NewPage(),
             pw.Header(
               level: 0,
-              child: pw.Text('Anexo de fotos',
-                  style: pw.TextStyle(
-                      fontSize: 20, fontWeight: pw.FontWeight.bold)),
+              decoration: const pw.BoxDecoration(border: pw.Border()), // Remove borda
+              child: pw.Text(
+                'Anexo de fotos',
+                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey800),
+              ),
             ),
-            pw.SizedBox(height: 10),
+            pw.SizedBox(height: 16),
             for (final entry in photoEntries)
               pw.Anchor(
                 name: entry.anchorName,
                 child: pw.Container(
-                  margin: const pw.EdgeInsets.only(bottom: 20),
-                  padding: const pw.EdgeInsets.all(10),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey400),
+                  margin: const pw.EdgeInsets.only(bottom: 24),
+                  padding: const pw.EdgeInsets.only(left: 16, top: 8, bottom: 8),
+                  decoration: const pw.BoxDecoration(
+                    // Troca a caixa fechada por uma borda de destaque na esquerda
+                    border: pw.Border(left: pw.BorderSide(color: PdfColors.blueGrey300, width: 4)),
                   ),
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
-                        '${entry.employeeName} - ${DateFormat('dd/MM/yyyy').format(entry.date)}\n${entry.observation}',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        '${entry.employeeName} - ${DateFormat('dd/MM/yyyy').format(entry.date)}',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.grey800, fontSize: 14),
                       ),
-                      pw.SizedBox(height: 8),
+                      if (entry.observation.isNotEmpty) ...[
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          entry.observation,
+                          style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 12),
+                        ),
+                      ],
+                      pw.SizedBox(height: 12),
                       pw.Image(
                         pw.MemoryImage(entry.imageBytes),
                         width: 300,
