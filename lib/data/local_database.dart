@@ -58,7 +58,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Tabela de configuração (para saldo inicial)
     await db.execute('''
       CREATE TABLE $_configTableName (
         key TEXT PRIMARY KEY,
@@ -66,7 +65,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Índice para ordenação por data
     await db.execute('''
       CREATE INDEX idx_cash_logs_date ON $_tableName (date DESC)
     ''');
@@ -74,7 +72,6 @@ class DatabaseHelper {
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 3) {
-      // Versão 3: adiciona tabela de configuração
       await db.execute('''
         CREATE TABLE $_configTableName (
           key TEXT PRIMARY KEY,
@@ -83,8 +80,6 @@ class DatabaseHelper {
       ''');
     }
   }
-
-  // ==================== CRUD OPERATIONS ====================
 
   Future<void> insertCashLog(CashLog log) async {
     final db = await database;
@@ -95,7 +90,6 @@ class DatabaseHelper {
     );
   }
 
-  /// Salva múltiplos logs (para sync batch)
   Future<void> insertCashLogs(List<CashLog> logs) async {
     final db = await database;
     final batch = db.batch();
@@ -136,7 +130,6 @@ class DatabaseHelper {
     return recentLogs.toList();
   }
 
-  /// Leitura de logs filtrados por tipo
   Future<List<CashLog>> getCashLogsByType(CashType type) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -147,7 +140,6 @@ class DatabaseHelper {
     return List.generate(maps.length, (i) => CashLog.fromMap(maps[i]));
   }
 
-  /// Leitura de logs filtrados por data (intervalo)
   Future<List<CashLog>> getCashLogsByDateRange(
       DateTime startDate,
       DateTime endDate,
@@ -169,7 +161,6 @@ class DatabaseHelper {
     await db.delete('app_config');
   }
 
-  /// Deleta um log pelo ID
   Future<void> deleteCashLog(String id) async {
     final db = await database;
     await db.delete(
@@ -179,7 +170,6 @@ class DatabaseHelper {
     );
   }
 
-  /// Deleta múltiplos logs (por ID)
   Future<void> deleteCashLogs(List<String> ids) async {
     final db = await database;
     final batch = db.batch();
@@ -189,7 +179,6 @@ class DatabaseHelper {
     await batch.commit();
   }
 
-  /// Obtém um log pelo ID
   Future<CashLog?> getCashLogById(String id) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -201,7 +190,6 @@ class DatabaseHelper {
     return CashLog.fromMap(maps[0]);
   }
 
-  /// Salva o saldo inicial na tabela de configuração
   Future<void> saveInitialBalance(double balance) async {
     final db = await database;
     await db.insert(
@@ -211,7 +199,6 @@ class DatabaseHelper {
     );
   }
 
-  /// Obtém o saldo inicial cacheado
   Future<double?> getCachedInitialBalance() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -223,7 +210,6 @@ class DatabaseHelper {
     return double.tryParse(maps[0]['value'] as String);
   }
 
-  /// Deleta todos os dados (para reset completo)
   Future<void> resetDatabase() async {
     final db = await database;
     await db.execute('DROP TABLE IF EXISTS $_tableName');

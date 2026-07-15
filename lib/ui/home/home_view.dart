@@ -38,8 +38,10 @@ class _HomeViewState extends ConsumerState<HomeView>
     );
     WidgetsBinding.instance.addObserver(this);
     if (Platform.isAndroid) {
-      _hasCheckedUpdateThisSession = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _checkForUpdate());
+      if (!_hasCheckedUpdateThisSession) {
+        _hasCheckedUpdateThisSession = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) => _checkForUpdate());
+      }
     }
   }
 
@@ -65,7 +67,7 @@ class _HomeViewState extends ConsumerState<HomeView>
     super.build(context);
 
     final initialBalanceAsync = ref.watch(initialBalanceProvider);
-    final cashLogsAsync = ref.watch(cashLogsProvider(true));
+    final cashLogsAsync = ref.watch(cashLogsProvider);
 
     return initialBalanceAsync.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -102,7 +104,7 @@ class _HomeViewState extends ConsumerState<HomeView>
           const SizedBox(height: 24),
           _buildButtons(),
           const SizedBox(height: 24),
-          _buildRecentTransactions(cashLogsState.logs),
+          _buildRecentTransactions(cashLogsState.logs.length > 5 ? cashLogsState.logs.sublist(0, 5) : cashLogsState.logs),
         ],
       ),
     );
@@ -240,33 +242,6 @@ class _HomeViewState extends ConsumerState<HomeView>
       ),
     );
   }
-  //TODO
-  // void _showSyncStatus() {
-  //   final syncController = ref.read(syncControllerProvider);
-  //   syncController.getPendingCount().then((count) {
-  //     if (count > 0 && mounted) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(
-  //           behavior: SnackBarBehavior.floating,
-  //           content: Text('$count registro(s) pendentes'),
-  //           action: SnackBarAction(label: 'Sincronizar', onPressed: _runSync),
-  //         ),
-  //       );
-  //     }
-  //   });
-  // }
-
-  // Future<void> _runSync() async {
-  //   try {
-  //     final synced = await ref.read(syncControllerProvider).syncPendingLogs();
-  //     ref.read(cashLogsProvider(false).notifier).loadAllLogs();
-  //     if (mounted) {
-  //       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$synced sincronizados')));
-  //     }
-  //   } catch (e) {
-  //     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e')));
-  //   }
-  // }
 
   Future<void> _showTransactionDetails(CashLog log) async {
     showDialog(

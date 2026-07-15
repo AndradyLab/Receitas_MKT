@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:receitas_mkt/logic/pdf_service.dart';
 import 'package:receitas_mkt/logic/excel_service.dart';
 import 'package:receitas_mkt/logic/update_android_service.dart';
@@ -110,7 +111,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
           ),
           ElevatedButton(
             onPressed: () async {
-              await ref.read(cashLogsProvider(false).notifier).resetFullDBApplication();
+              await ref.read(cashLogsProvider.notifier).resetFullDBApplication();
 
               if (mounted) {
                 Navigator.pop(context);
@@ -279,7 +280,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                       setState(() {});
 
                       final cashState = ref
-                          .read(cashLogsProvider(false))
+                          .read(cashLogsProvider)
                           .value;
 
                       if (cashState == null) {
@@ -424,7 +425,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                         setDialogState(() => _isGeneratingExcel = true);
                         setState(() {});
 
-                        final cashState = ref.read(cashLogsProvider(false)).value;
+                        final cashState = ref.read(cashLogsProvider).value;
 
                         if (cashState == null) {
                           setDialogState(() => _isGeneratingExcel = false);
@@ -473,19 +474,22 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
   }
 
   Future<void> _showAboutDialog(BuildContext context) async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    final _localVersionCode = int.parse(packageInfo.buildNumber);
+
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sobre'),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Receitas Marketing'),
-            SizedBox(height: 8),
-            Text('Versão: 1.0.0'),
-            SizedBox(height: 8),
-            Text('Gerenciador de fluxo de caixa para área de marketing'),
+            const Text('Receitas Marketing'),
+            const SizedBox(height: 8),
+            Text('$_localVersionCode'),
+            const SizedBox(height: 8),
+            const Text('Gerenciador de fluxo de caixa para área de marketing'),
           ],
         ),
         actions: [

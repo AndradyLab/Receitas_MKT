@@ -7,10 +7,6 @@ final databaseProvider = Provider<DatabaseHelper>((ref) {
   throw UnimplementedError('O databaseProvider deve ser sobrescrito no main.dart');
 });
 
-// ==========================================
-// INITIAL BALANCE (Novo Padrão)
-// ==========================================
-
 final initialBalanceProvider = AsyncNotifierProvider<InitialBalanceNotifier, double?>(
   InitialBalanceNotifier.new,
 );
@@ -20,24 +16,20 @@ class InitialBalanceNotifier extends AsyncNotifier<double?> {
 
   @override
   Future<double?> build() async {
-    // Fallback para cache local
     final cachedBalance = await _database.getCachedInitialBalance();
     if (cachedBalance != null) {
       return cachedBalance;
     }
 
-    // Sem saldo configurado
     return 0.0;
   }
 
-  /// Atualiza o saldo inicial
   Future<void> updateInitialBalance(double newBalance) async {
     state = const AsyncLoading();
 
     try {
       await _database.saveInitialBalance(newBalance);
 
-      // Atualiza o estado
       state = AsyncValue.data(newBalance);
     } catch (e, stack) {
       state = AsyncValue.error('Erro ao atualizar saldo inicial: $e', stack);
@@ -92,18 +84,15 @@ class CashLogsState extends Equatable {
   List<Object?> get props => [logs];
 }
 
-final cashLogsProvider = AsyncNotifierProvider.family<CashLogsNotifier, CashLogsState, bool>(
+final cashLogsProvider = AsyncNotifierProvider<CashLogsNotifier, CashLogsState>(
   CashLogsNotifier.new,
 );
 
-class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
+class CashLogsNotifier extends AsyncNotifier<CashLogsState> {
   DatabaseHelper get _database => ref.read(databaseProvider);
 
   @override
-  Future<CashLogsState> build(bool isRecent) async {
-    if (isRecent) {
-      return _fetchRecentState();
-    }
+  Future<CashLogsState> build() async {
     return _fetchState();
   }
 
@@ -118,7 +107,7 @@ class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
     try {
       await _database.deleteAllLogs();
 
-      ref.invalidate(cashLogsProvider);
+      ref.invalidateSelf();
       ref.invalidate(initialBalanceProvider);
 
     } catch (e, stack) {
@@ -131,13 +120,11 @@ class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
     return CashLogsState(logs: logs);
   }
 
-  /// Busca logs por nome do funcionário
   Future<List<CashLog>> searchByEmployee(String query) async {
     final logs = await _database.getAllCashLogs();
     return logs.where((l) => l.employeeName.toLowerCase().contains(query.toLowerCase())).toList();
   }
 
-  /// Carrega todos os logs do banco
   Future<void> loadAllLogs() async {
     state = const AsyncLoading();
     try {
@@ -163,13 +150,11 @@ class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
       await _database.insertCashLog(log);
 
       state = AsyncValue.data(await _fetchState());
-      ref.invalidate(cashLogsProvider(true));
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
     }
   }
 
-  /// Atualiza um log existente
   Future<void> updateLog(CashLog log) async {
     state = const AsyncLoading();
 
@@ -181,7 +166,6 @@ class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
     }
   }
 
-  /// Deleta um log
   Future<void> deleteLog(String id) async {
     state = const AsyncLoading();
 
@@ -193,13 +177,11 @@ class CashLogsNotifier extends FamilyAsyncNotifier<CashLogsState, bool> {
     }
   }
 
-  /// Filtra logs por tipo (retorna nova lista filtrada)
   List<CashLog> filterByType(CashType type) {
     final logs = state.value?.logs ?? [];
     return logs.where((l) => l.type == type).toList();
   }
 
-  /// Remove filtro e carrega todos os logs
   Future<void> clearFilter() async {
     await loadAllLogs();
   }
