@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import 'package:receitas_mkt/data/cash_log_model.dart';
+import 'package:receitas_mkt/logic/cash_log_filter.dart';
 import 'package:receitas_mkt/logic/cash_logic_provider.dart';
 import 'package:receitas_mkt/ui/widgets/shared_widgets.dart';
 
@@ -162,7 +163,7 @@ class LogsView extends ConsumerWidget {
   Future<void> _showSearchDialog(BuildContext context, WidgetRef ref) async {
     final TextEditingController controller = TextEditingController();
     List<CashLog> filteredLogs = [];
-    SearchFilter currentFilter = SearchFilter.employee;
+    SearchFilter currentFilter = SearchFilter.date;
     return showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -176,9 +177,7 @@ class LogsView extends ConsumerWidget {
                 TextField(
                   controller: controller,
                   decoration: InputDecoration(
-                    hintText: currentFilter == SearchFilter.employee
-                        ? 'Nome do funcionário...'
-                        : 'Buscar por data: dia/mês/ano',
+                    hintText: searchHintFor(currentFilter),
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: PopupMenuButton<SearchFilter>(
                       icon: const Icon(Icons.filter_list),
@@ -193,12 +192,16 @@ class LogsView extends ConsumerWidget {
                       },
                       itemBuilder: (BuildContext context) => <PopupMenuEntry<SearchFilter>>[
                         const PopupMenuItem<SearchFilter>(
-                          value: SearchFilter.employee,
-                          child: Text('Funcionário'),
-                        ),
-                        const PopupMenuItem<SearchFilter>(
                           value: SearchFilter.date,
                           child: Text('Data'),
+                        ),
+                        const PopupMenuItem<SearchFilter>(
+                          value: SearchFilter.month,
+                          child: Text('Mês'),
+                        ),
+                        const PopupMenuItem<SearchFilter>(
+                          value: SearchFilter.observation,
+                          child: Text('Observação'),
                         ),
                       ],
                     ),
@@ -206,13 +209,10 @@ class LogsView extends ConsumerWidget {
                   autofocus: true,
                   onChanged: (value) {
                     final currentState = ref.read(cashLogsProvider).value;
-                    if (value.isNotEmpty && currentState != null) {
-                      final results = currentState.logs.where((log) => switch (currentFilter) {
-                        SearchFilter.employee => log.employeeName.toLowerCase().contains(value.toLowerCase()),
-                        SearchFilter.date     => DateFormat('dd/MM/yyyy').format(log.date).contains(value),                      }).toList();
-                      setState(() => filteredLogs = results);
-                    } else {
-                      setState(() => filteredLogs = []);
+                    if (currentState != null) {
+                      setState(() {
+                        filteredLogs = filterCashLogs(currentState.logs, value, currentFilter);
+                      });
                     }
                   },
                 ),
@@ -646,5 +646,3 @@ class LogsView extends ConsumerWidget {
     );
   }
 }
-
-enum SearchFilter { employee, date }
