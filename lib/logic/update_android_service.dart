@@ -44,9 +44,7 @@ class UpdateService {
       }
     }
 
-    final dirs = await getExternalCacheDirectories();
-    final targetDir =
-        (dirs != null && dirs.isNotEmpty) ? dirs.first : await getTemporaryDirectory();
+    final targetDir = await getTemporaryDirectory();
     final filePath = '${targetDir.path}/receitas_mkt_update.apk';
 
     await _dio.download(
@@ -57,6 +55,15 @@ class UpdateService {
       },
     );
 
-    await OpenFilex.open(filePath);
+    final openResult = await OpenFilex.open(
+      filePath,
+      type: 'application/vnd.android.package-archive',
+    );
+
+    if (openResult.type != ResultType.done) {
+      throw Exception(
+        'Falha ao abrir o instalador: ${openResult.type} — ${openResult.message}',
+      );
+    }
   }
 }
