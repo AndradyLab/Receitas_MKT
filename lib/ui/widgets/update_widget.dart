@@ -51,9 +51,9 @@ class _UpdateToastState extends State<UpdateToast> {
         widget.updateInfo,
         onProgress: (p) => setState(() => _progress = p),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       setState(() {
-        _errorMessage = 'Falha ao baixar. Toque para tentar novamente.';
+        _errorMessage = 'Erro: $e e StackTrace: $stackTrace'; 
         _progress = null;
       });
     }

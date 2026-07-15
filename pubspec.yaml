@@ -1,7 +1,7 @@
 name: receitas_mkt
 description: Aplicativo de gerenciamento de fluxo de caixa para marketing.
 publish_to: "none"
-version: 1.2.1+6
+version: 1.4.0+8
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -59,7 +59,7 @@ msix_config:
   display_name: Receitas Marketing
   publisher_display_name: AndradyLabs
   identity_name: com.andradylabs.receitasmkt
-  msix_version: 1.2.1.0
+  msix_version: 1.4.0.0
   logo_path: windows\runner\resources\app_icon.ico
   capabilities: internetClient, picturesLibrary, documentsLibrary
   publisher: CN=AndradyLabs
