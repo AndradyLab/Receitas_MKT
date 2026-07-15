@@ -19,6 +19,16 @@ jobs:
 
       - run: flutter pub get
 
+      - name: Decode Keystore and create key.properties
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo $KEYSTORE_BASE64 | base64 --decode > android/app/upload-keystore.jks
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > android/key.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
+          echo "storeFile=upload-keystore.jks" >> android/key.properties
+
       - run: flutter build apk --release
 
       - name: Rename APK
@@ -48,6 +58,7 @@ jobs:
         run: |
           mkdir -p certs
           echo "${{ secrets.MSIX_CERTIFICATE_BASE64 }}" | base64 --decode > certs/receitas_mkt.pfx
+          
       - name: Build MSIX
         run: >
           flutter pub run msix:create
@@ -121,7 +132,7 @@ jobs:
       - name: Extract annotated tag message
         id: tagmsg
         run: |
-          MSG=$(git tag -l --format='%(contents)' "${GITHUB_REF_NAME}")
+          MSG=$(git tag -l --format='\%(contents)' "${GITHUB_REF_NAME}")
           {
             echo "msg<<EOF_TAGMSG"
             echo "$MSG"

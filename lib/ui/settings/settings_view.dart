@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -58,9 +60,11 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
           _buildSectionTitle(context, 'Exportação'),
           _buildPDFSystem(context, ref),
           const SizedBox(height: 24),
-          _buildSectionTitle(context, 'Atualizações'),
-          _buildUpdateSection(context),
-          const SizedBox(height: 24), 
+          if (Platform.isAndroid) ...[
+            _buildSectionTitle(context, 'Atualizações'),
+            _buildUpdateSection(context),
+            const SizedBox(height: 24),
+          ],
           _buildSectionTitle(context, 'Sobre'),
           _buildAboutSection(context),
         ],
@@ -475,7 +479,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
 
   Future<void> _showAboutDialog(BuildContext context) async {
     final packageInfo = await PackageInfo.fromPlatform();
-    final _localVersionCode = int.parse(packageInfo.buildNumber);
+    final _localVersionCode = int.parse(packageInfo.version);
 
     return showDialog(
       context: context,
