@@ -21,9 +21,8 @@ class UpdateService {
   Future<UpdateInfo?> checkForUpdate() async {
     final response = await _dio.get(_repoApiUrl);
     final remote = UpdateInfo.fromGithubRelease(response.data);
-
     final packageInfo = await PackageInfo.fromPlatform();
-    final localVersionCode = int.parse(packageInfo.buildNumber);
+    final localVersionCode = int.parse(packageInfo.version.replaceAll('.', ''));
 
     if (remote.versionCode > localVersionCode) {
       return remote;

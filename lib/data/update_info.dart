@@ -31,6 +31,6 @@ class UpdateInfo {
 
   static int _versionCodeFromServer(String v) {
     final parts = v.split('.').map(int.parse).toList();
-    return parts[0] * 10000 + parts[1] * 100 + parts[2];
+    return parts[0] * 100 + parts[1] * 10 + parts[2];
   }
 }
