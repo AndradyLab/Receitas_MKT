@@ -313,6 +313,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                         currentBalance: savedBalance,
                         startDate: _startDate!,
                         endDate: _endDate!,
+                        cashLogsState: cashState,
                       );
 
                       setDialogState(() => _isGeneratingPdf = false);
