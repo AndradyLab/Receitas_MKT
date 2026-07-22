@@ -149,9 +149,7 @@ class _HomeViewState extends ConsumerState<HomeView>
                         children: [
                           Text(
                             'Solicitar novo saldo!',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
                           Text(
                             'Data da última solicitação: ${cashLogsState.lastResetDate != null ? _dateFormatter.format(cashLogsState.lastResetDate!) : "Nenhuma"}',
@@ -252,7 +250,7 @@ class _HomeViewState extends ConsumerState<HomeView>
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   prefixText: 'R\$ ',
-                  hint: const Text("Valor: R\$ 0,00"),
+                  hint: const Text("Digite o novo saldo"),
                   errorText: errorMessage, 
                 ),
                 onChanged: (value) {
