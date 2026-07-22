@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:receitas_mkt/logic/update_android_service.dart';
+import 'package:receitas_mkt/logic/utils.dart';
 import 'package:receitas_mkt/ui/widgets/update_widget.dart';
 import 'dart:io' show Platform;
 
@@ -23,6 +24,7 @@ class _HomeViewState extends ConsumerState<HomeView>
   late final DateFormat _dateFormatter;
   late final NumberFormat _currencyFormatter;
   static bool _hasCheckedUpdateThisSession = false;
+  final Utils _utils = Utils();
 
   @override
   bool get wantKeepAlive => true;
@@ -66,17 +68,16 @@ class _HomeViewState extends ConsumerState<HomeView>
   Widget build(BuildContext context) {
     super.build(context);
 
-    final initialBalanceAsync = ref.watch(initialBalanceProvider);
-    final cashLogsAsync = ref.watch(cashLogsProvider);
-
-    return initialBalanceAsync.when(
+    final balanceProv = ref.watch(balanceProvider);
+    final cashLogProvider = ref.watch(cashLogsProvider);
+    return balanceProv.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (err, stack) => Scaffold(body: Center(child: Text('Erro: $err'))),
-      data: (initialBalance) => cashLogsAsync.when(
+      data: (balance) => cashLogProvider.when(
         loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
         error: (err, stack) => Scaffold(body: Center(child: Text('Erro: $err'))),
         data: (cashLogsState) {
-          final currentBalance = (initialBalance ?? 0.0) + cashLogsState.currentBalance;
+          final currentBalance = (balance ?? 0.0) + cashLogsState.currentBalance;
 
           return WillPopScope(
             onWillPop: () async => false,
@@ -111,41 +112,61 @@ class _HomeViewState extends ConsumerState<HomeView>
   }
 
   Widget _buildDashboardCards(double currentBalance, CashLogsState cashLogsState) {
-    final ingressTotal = cashLogsState.ingressLogs.fold<double>(0, (sum, l) => sum + l.amount);
-    final egressTotal = cashLogsState.egressLogs.fold<double>(0, (sum, l) => sum + l.amount);
+    final ingressTotal = _utils.calculateExpenses(cashLogsState.ingressLogs);
+    final egressTotal = _utils.calculateExpenses(cashLogsState.egressLogs);
 
     return Column(
       children: [
         Center(
-          child:
-            InkWell(
-              onTap: () => _showEditBalanceDialog(currentBalance),
-              borderRadius: BorderRadius.circular(8),
-
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 48.0, vertical: 4.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Saldo Atual',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(fontSize: 12),
+          child: 
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 48.0, vertical: 4.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Saldo Atual',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(fontSize: 12),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _currencyFormatter.format(currentBalance),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: currentBalance >= 0
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.red,
                     ),
-                    Text(
-                      _currencyFormatter.format(currentBalance),
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: currentBalance >= 0
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.red,
+                  ),
+                  const SizedBox(height: 4),
+                  InkWell(
+                    onTap: () => _showEditBalanceDialog(currentBalance),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4.0),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Solicitar novo saldo!',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          Text(
+                            'Data da última solicitação: ${cashLogsState.lastResetDate != null ? _dateFormatter.format(cashLogsState.lastResetDate!) : "Nenhuma"}',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-        ),
+          ),
         const SizedBox(height: 12),
         Row(
           children: [
@@ -217,29 +238,55 @@ class _HomeViewState extends ConsumerState<HomeView>
 
   Future<void> _showEditBalanceDialog(double currentBalance) async {
     final controller = TextEditingController(text: currentBalance.toString());
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Editar Saldo Inicial'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(prefixText: 'R\$ '),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-          ElevatedButton(
-            onPressed: () async {
-              final val = double.tryParse(controller.text);
-              if (val != null) {
-                await ref.read(initialBalanceProvider.notifier).updateInitialBalance(val);
-                if (context.mounted) Navigator.pop(context);
-              }
-            },
-            child: const Text('Salvar'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        String? errorMessage;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Solicitar novo saldo'),
+              content: TextField(
+                controller: controller,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  prefixText: 'R\$ ',
+                  errorText: errorMessage, 
+                ),
+                onChanged: (value) {
+                  if (errorMessage != null) {
+                    setState(() => errorMessage = null);
+                  }
+                },
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context), 
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final sanitizedText = controller.text.replaceAll(',', '.');
+                    final value = double.tryParse(sanitizedText);
+                    
+                    if (value == null) {
+                      setState(() {
+                        errorMessage = 'Adicione um valor válido';
+                      });
+                    } else {
+                      await ref.read(balanceProvider.notifier).updateBalance(value);
+                      await ref.read(cashLogsProvider.notifier).setLastResetDate();
+                      if (context.mounted) Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('Salvar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

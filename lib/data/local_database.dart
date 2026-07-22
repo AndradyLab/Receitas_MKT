@@ -26,7 +26,6 @@ class DatabaseHelper {
   static const String _configTableName = 'app_config';
 
   Future<Database> _initDatabase() async {
-
     if (!kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
@@ -45,28 +44,28 @@ class DatabaseHelper {
     return database;
   }
 
-  Future<void> _onCreate(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE $_tableName (
-        id TEXT PRIMARY KEY,
-        type INTEGER NOT NULL,
-        photoPath TEXT,
-        amount REAL NOT NULL,
-        observation TEXT NULL,
-        employeeName TEXT NOT NULL,
-        date TEXT NOT NULL
-      )
+Future<void> _onCreate(Database db, int version) async {
+  await db.execute('''
+    CREATE TABLE $_tableName (
+      id TEXT PRIMARY KEY,
+      type INTEGER NOT NULL,
+      photoPath TEXT,
+      amount REAL NOT NULL,
+      observation TEXT NULL,
+      employeeName TEXT NOT NULL,
+      date TEXT NOT NULL
+    )
     ''');
 
-    await db.execute('''
-      CREATE TABLE $_configTableName (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL
-      )
+  await db.execute('''
+    CREATE TABLE $_configTableName (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
     ''');
 
-    await db.execute('''
-      CREATE INDEX idx_cash_logs_date ON $_tableName (date DESC)
+  await db.execute('''
+    CREATE INDEX idx_cash_logs_date ON $_tableName (date DESC)
     ''');
   }
 
@@ -190,21 +189,41 @@ class DatabaseHelper {
     return CashLog.fromMap(maps[0]);
   }
 
-  Future<void> saveInitialBalance(double balance) async {
+  Future<void> saveBalance(double balance) async {
     final db = await database;
     await db.insert(
       _configTableName,
-      {'key': 'cached_initial_balance', 'value': balance.toString()},
+      {'key': 'balance', 'value': balance.toString()},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
-  Future<double?> getCachedInitialBalance() async {
+  Future<void> saveLastResetDate() async {
+    final db = await database;
+    await db.insert(
+      _configTableName,
+      {'key': 'last_reset_date', 'value': DateTime.now().toIso8601String()},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<DateTime?> getLastResetDate() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       _configTableName,
       where: 'key = ?',
-      whereArgs: ['cached_initial_balance'],
+      whereArgs: ['last_reset_date'],
+    );
+    if (maps.isEmpty) return null;
+    return DateTime.tryParse(maps[0]['value'] as String);
+  }
+
+  Future<double?> getCachedBalance() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      _configTableName,
+      where: 'key = ?',
+      whereArgs: ['balance'],
     );
     if (maps.isEmpty) return null;
     return double.tryParse(maps[0]['value'] as String);

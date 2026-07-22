@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:receitas_mkt/logic/cash_logic_provider.dart';
+import 'package:receitas_mkt/logic/utils.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -42,9 +43,7 @@ class _PdfBuildParams {
 }
 
 class PdfService {
-  double calculateExpenses(List<CashLog> logs) {
-    return logs.fold<double>(0, (sum, l) => sum + l.amount);
-  }
+  final Utils _utils = Utils();
 
   Future<PdfExportResult> generateAndSharePDF({
     required List<CashLog> logs,
@@ -56,8 +55,8 @@ class PdfService {
     if (logs.isEmpty) {
       return const PdfExportResult(PdfExportStatus.empty);
     }
-    final ingressTotal = calculateExpenses(cashLogsState.ingressLogs);
-    final egressTotal = calculateExpenses(cashLogsState.egressLogs);
+    final ingressTotal = _utils.calculateExpenses(cashLogsState.ingressLogs);
+    final egressTotal = _utils.calculateExpenses(cashLogsState.egressLogs);
 
     try {
       final params = _PdfBuildParams(

@@ -302,7 +302,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                           _startDate!, _endDate!);
 
                       final initialBalance = ref
-                          .read(initialBalanceProvider)
+                          .read(balanceProvider)
                           .value ?? 0.0;
                       final savedBalance = initialBalance +
                           cashState.currentBalance;

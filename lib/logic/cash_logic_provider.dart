@@ -7,49 +7,47 @@ final databaseProvider = Provider<DatabaseHelper>((ref) {
   throw UnimplementedError('O databaseProvider deve ser sobrescrito no main.dart');
 });
 
-final initialBalanceProvider = AsyncNotifierProvider<InitialBalanceNotifier, double?>(
-  InitialBalanceNotifier.new,
+final balanceProvider = AsyncNotifierProvider<BalanceNotifier, double?>(
+  BalanceNotifier.new,
 );
 
-class InitialBalanceNotifier extends AsyncNotifier<double?> {
+class BalanceNotifier extends AsyncNotifier<double?> {
   DatabaseHelper get _database => ref.read(databaseProvider);
 
   @override
   Future<double?> build() async {
-    final cachedBalance = await _database.getCachedInitialBalance();
-    if (cachedBalance != null) {
-      return cachedBalance;
-    }
-
-    return 0.0;
+    return await _database.getCachedBalance();
   }
 
-  Future<void> updateInitialBalance(double newBalance) async {
+  Future<void> updateBalance(double newBalance) async {
     state = const AsyncLoading();
 
     try {
-      await _database.saveInitialBalance(newBalance);
+      await _database.saveBalance(newBalance);
 
       state = AsyncValue.data(newBalance);
     } catch (e, stack) {
-      state = AsyncValue.error('Erro ao atualizar saldo inicial: $e', stack);
+      state = AsyncValue.error('Erro ao atualizar saldo: $e', stack);
     }
   }
 }
 
 class CashLogsState extends Equatable {
   final List<CashLog> logs;
+  final DateTime? lastResetDateTime;
 
   const CashLogsState({
-    this.logs = const [],
+    required this.logs,
+    this.lastResetDateTime,
   });
 
   CashLogsState copyWith({
     List<CashLog>? logs,
-    int? pendingCount,
+    DateTime? lastResetDateTime,
   }) {
     return CashLogsState(
       logs: logs ?? this.logs,
+      lastResetDateTime: lastResetDateTime ?? this.lastResetDateTime,
     );
   }
 
@@ -68,6 +66,10 @@ class CashLogsState extends Equatable {
     return ingress - egress;
   }
 
+  DateTime? get lastResetDate {
+    return lastResetDateTime;
+  }
+
   List<CashLog> get ingressLogs => logs.where((l) => l.type == CashType.ingress).toList();
   List<CashLog> get egressLogs => logs.where((l) => l.type == CashType.egress).toList();
 
@@ -81,7 +83,7 @@ class CashLogsState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [logs];
+  List<Object?> get props => [logs, lastResetDateTime];
 }
 
 final cashLogsProvider = AsyncNotifierProvider<CashLogsNotifier, CashLogsState>(
@@ -97,8 +99,21 @@ class CashLogsNotifier extends AsyncNotifier<CashLogsState> {
   }
 
   Future<CashLogsState> _fetchState() async {
-    final logs = await _database.getAllCashLogs();
-    return CashLogsState(logs: logs);
+    final lastResetDate = await _database.getLastResetDate();
+    final logs = await _database.getCashLogsByDateRange(
+      lastResetDate ?? DateTime.fromMillisecondsSinceEpoch(0),
+      DateTime.now(),
+    );
+
+    return CashLogsState(logs: logs, lastResetDateTime: lastResetDate);
+  }
+
+  Future<DateTime?> getLastResetDate() async {
+    return await _database.getLastResetDate();
+  }
+
+  Future<void> setLastResetDate() async {
+    await _database.saveLastResetDate();
   }
 
   Future<void> resetFullDBApplication() async {
@@ -108,7 +123,7 @@ class CashLogsNotifier extends AsyncNotifier<CashLogsState> {
       await _database.deleteAllLogs();
 
       ref.invalidateSelf();
-      ref.invalidate(initialBalanceProvider);
+      ref.invalidate(balanceProvider);
 
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
@@ -117,7 +132,7 @@ class CashLogsNotifier extends AsyncNotifier<CashLogsState> {
 
   Future<CashLogsState> _fetchRecentState() async {
     final logs = await _database.getRecentLogs();
-    return CashLogsState(logs: logs);
+    return CashLogsState(logs: logs, lastResetDateTime: null);
   }
 
   Future<List<CashLog>> searchByEmployee(String query) async {
