@@ -301,10 +301,10 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                       final logsInRange = cashState.getByDateRange(
                           _startDate!, _endDate!);
 
-                      final initialBalance = ref
+                      final configuredBalance = ref
                           .read(balanceProvider)
                           .value ?? 0.0;
-                      final savedBalance = initialBalance +
+                      final savedBalance = configuredBalance +
                           cashState.currentBalance;
 
                       final pdfService = ref.read(pdfServiceProvider);

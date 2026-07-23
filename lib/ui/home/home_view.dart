@@ -105,15 +105,15 @@ class _HomeViewState extends ConsumerState<HomeView>
           const SizedBox(height: 24),
           _buildButtons(),
           const SizedBox(height: 24),
-          _buildRecentTransactions(cashLogsState.logs.length > 5 ? cashLogsState.logs.sublist(0, 5) : cashLogsState.logs),
+          _buildRecentTransactions(cashLogsState.recentFiveLogs),
         ],
       ),
     );
   }
 
   Widget _buildDashboardCards(double currentBalance, CashLogsState cashLogsState) {
-    final ingressTotal = _utils.calculateExpenses(cashLogsState.ingressLogs);
-    final egressTotal = _utils.calculateExpenses(cashLogsState.egressLogs);
+    final ingressTotal = cashLogsState.ingressLogs;
+    final egressTotal = cashLogsState.egressLogs;
 
     return Column(
       children: [

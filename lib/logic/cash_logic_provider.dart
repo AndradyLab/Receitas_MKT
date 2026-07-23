@@ -51,10 +51,15 @@ class CashLogsState extends Equatable {
     );
   }
 
+  List<CashLog> get recentFiveLogs {
+    return logs.take(5).toList();
+  }
+
   double get currentBalance {
     double ingress = 0;
     double egress = 0;
-
+    List<CashLog> logs = getLogsByDateRange();
+    
     for (final log in logs) {
       if (log.type == CashType.ingress) {
         ingress += log.amount;
@@ -70,8 +75,8 @@ class CashLogsState extends Equatable {
     return lastResetDateTime;
   }
 
-  List<CashLog> get ingressLogs => logs.where((l) => l.type == CashType.ingress).toList();
-  List<CashLog> get egressLogs => logs.where((l) => l.type == CashType.egress).toList();
+  double get ingressLogs => getLogsByDateRange().where((l) => l.type == CashType.ingress).fold(0.0, (sum, log) => sum + log.amount);
+  double get egressLogs => getLogsByDateRange().where((l) => l.type == CashType.egress).fold(0.0, (sum, log) => sum + log.amount);
 
   List<CashLog> getByDateRange(DateTime start, DateTime end) {
     return logs
@@ -81,6 +86,16 @@ class CashLogsState extends Equatable {
         .where((l) => l.date.isBefore(end) || l.date.isAtSameMomentAs(end))
         .toList();
   }
+
+   List<CashLog> getLogsByDateRange() {
+    return logs.where((log) {
+      if (lastResetDateTime == null) {
+        return true;
+      }
+      return log.date.isAfter(lastResetDateTime!);
+    }).toList();
+  }
+
 
   @override
   List<Object?> get props => [logs, lastResetDateTime];
@@ -100,10 +115,7 @@ class CashLogsNotifier extends AsyncNotifier<CashLogsState> {
 
   Future<CashLogsState> _fetchState() async {
     final lastResetDate = await _database.getLastResetDate();
-    final logs = await _database.getCashLogsByDateRange(
-      lastResetDate ?? DateTime.fromMillisecondsSinceEpoch(0),
-      DateTime.now(),
-    );
+    final logs = await _database.getAllCashLogs();
 
     return CashLogsState(logs: logs, lastResetDateTime: lastResetDate);
   }
